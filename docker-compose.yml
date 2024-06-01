@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tg-bot
+    restart: always
+    env_file:
+      - .env
+    depends_on:
+      - mongoS
+      - redisS
+    ports:
+      - "8080:8080"
+
+  mongoS:
+    image: mongo:8.0.0-rc4-jammy
+    container_name: mongoS
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    volumes:
+      - ./mongo-data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=$nostrada
+      - MONGO_INITDB_ROOT_PASSWORD=$nostrada
+    command: --port ${DB_PORT}
+
+  redisS:
+    image: redis:7.2.4-alpine
+    container_name: redisS
+    env_file:
+      - .env
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    volumes:
+      - ./redis-data:/data
+    command: redis-server --port ${REDIS_PORT}
