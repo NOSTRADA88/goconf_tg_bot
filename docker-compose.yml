@@ -15,7 +15,7 @@ services:
 
   mongo:
     image: mongo:8.0.0-rc4-jammy
-    container_name: mongoS
+    container_name: mongo
     restart: always
     env_file:
       - .env

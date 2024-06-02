@@ -3,13 +3,14 @@
 -  [Used libraries](#used-libraries)
 
 
-## _Getting Started with_
+## Getting Started
 This is a telegram bot for _GolangConf 2024_.
 
-Easy steps to start a project 
-1. git pull ...
-2. set up an .env file. In project, you can find an .env.example file, make sure that you are using the same VARIABLES= as they named in the example file.
-3. docker-compose ...
+#### _Few easy steps to start a project :_
+1. #### `git pull https://github.com/NOSTRADA88/telegram-bot-go`
+2. #### `Create and set up your own ".env" file (in the pulled directory). In project, you can find an ".env.example", make sure that you are using THE SAME VARIABLES= as they named in the example file.`
+3. #### `If ".env" is ready, then type in cmd line` `docker-compose build` 
+4. #### `docker-compose up -d`
 
 
 ## Used libraries
@@ -20,18 +21,26 @@ Easy steps to start a project
 - [go-redis](https://github.com/redis/go-redis)
 
 ## Project Structure
-- `cmd/`: Contains the entry point of the application.
-    - `telegram-bot-go/`: Houses the main application executable.
-- `internal/`: Core application code that is not intended to be exported.
-    - `bot/`: Telegram bot handlers and routers.
-      - `fsm/`:
-      - `handlers/`
-    - `config/`:
-    - `models/`:
-    - `usecase/`: Application-specific business rules.
-    - `repository/`: Data access implementations.
-        - `mongodb/`: PostgreSQL repository implementations.
-        - `redis/`: Redis cache implementations.
-- `go.mod` and `go.sum`: Go module files for managing dependencies.
+- **cmd/**: Contains the entry point of the application.
+    - **telegram-bot-go/**: Houses the main application executable.
+        - **main.go**: Main application file.
+
+- **internal/**: Core application code that is not intended to be exported.
+    - **bot/**: Telegram bot handlers, routers, and keyboards.
+        - **fsm/**: Simple finite state machine.
+        - **handlers/**: Handlers for the bot.
+    - **config/**: Configuration files.
+        - **config.go**: Main configuration file.
+        - **config_test.go**: Tests for the configuration.
+    - **logger/**: Logging.
+        - **logger.go**: Main logging file.
+        - **logger_test.go**: Tests for logging.
+    - **models/**: Data models.
+        - **models.go**: Main data models.
+    - **repository/**: Data access implementations.
+        - **mongodb/**: MongoDB repository implementations.
+        - **redis/**: Redis cache implementations.
+
+- **go.mod** and **go.sum**: Go module files for managing dependencies.
 
 
