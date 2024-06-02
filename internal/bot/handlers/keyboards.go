@@ -17,7 +17,7 @@ func mainMenuAdminKB() gotgbot.InlineKeyboardMarkup {
 			{Text: "👀 Посмотреть доклады", CallbackData: viewReports},
 		},
 		{
-			{Text: "📝 Редактировать идентификацию", CallbackData: changeIdentification},
+			{Text: "📝 Редактировать идентификацию", CallbackData: updateIdentification},
 		},
 		{
 			{Text: "📥 Загрузить расписание", CallbackData: uploadSchedule},
@@ -38,7 +38,7 @@ func mainMenuUserKB() gotgbot.InlineKeyboardMarkup {
 			{Text: "👀 Посмотреть доклады", CallbackData: viewReports},
 		},
 		{
-			{Text: "📝 Редактировать идентификацию", CallbackData: changeIdentification},
+			{Text: "📝 Редактировать идентификацию", CallbackData: updateIdentification},
 		},
 	}
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
@@ -62,7 +62,7 @@ func backToMainMenuAdminKB() gotgbot.InlineKeyboardMarkup {
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
-func reportsWithFavoriteKB(reports []models.Report, user models.User) gotgbot.InlineKeyboardMarkup {
+func reportsWithFavoriteKB(reports []models.Report, user models.User, evaluations []models.Evaluation) gotgbot.InlineKeyboardMarkup {
 
 	if len(reports) == 0 {
 		kb := [][]gotgbot.InlineKeyboardButton{
@@ -109,7 +109,15 @@ func reportsWithFavoriteKB(reports []models.Report, user models.User) gotgbot.In
 				{Text: "⭐", CallbackData: fmt.Sprintf("add;%s", report.URL)},
 				{Text: evl, CallbackData: evlCB},
 			})
+
 		}
+
+		if len(evaluations) != 0 {
+			kb = append(kb, []gotgbot.InlineKeyboardButton{
+				{Text: "Мои отзывы", CallbackData: userEvaluations},
+			})
+		}
+
 	} else {
 		favReports := make(map[string]bool, len(reports))
 
@@ -159,7 +167,15 @@ func reportsWithFavoriteKB(reports []models.Report, user models.User) gotgbot.In
 				{Text: evl, CallbackData: evlCB},
 			})
 		}
+
+		if len(evaluations) != 0 {
+			kb = append(kb, []gotgbot.InlineKeyboardButton{
+				{Text: "Мои отзывы", CallbackData: userEvaluations},
+			})
+		}
+
 	}
+
 	kb = append(kb, []gotgbot.InlineKeyboardButton{
 		{Text: "⬅️ Назад", CallbackData: back},
 	})
@@ -234,5 +250,27 @@ func afterMarkKB() gotgbot.InlineKeyboardMarkup {
 			{Text: "В главное меню", CallbackData: back},
 		},
 	}
+	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
+}
+
+func userEvaluationsKB(reports []models.Report, evaluationMap map[string]bool) gotgbot.InlineKeyboardMarkup {
+	var kb [][]gotgbot.InlineKeyboardButton
+
+	for ind, report := range reports {
+		if _, exists := evaluationMap[report.URL]; exists {
+			updCB := fmt.Sprintf("%s;%s", updEv, report.URL)
+			dltCB := fmt.Sprintf("%s;%s", dlEv, report.URL)
+			kb = append(kb, []gotgbot.InlineKeyboardButton{
+				{Text: fmt.Sprintf("%v.", ind+1), CallbackData: "index"},
+				{Text: "✏️ Редактировать", CallbackData: updCB},
+				{Text: "🗑️ Удалить", CallbackData: dltCB},
+			})
+		}
+	}
+
+	kb = append(kb, []gotgbot.InlineKeyboardButton{
+		{Text: "Вернуться к докладам", CallbackData: viewReports},
+	})
+
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }

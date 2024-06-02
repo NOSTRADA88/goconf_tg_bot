@@ -29,6 +29,7 @@ type DataManipulator interface {
 	SelectEvaluations(coll *mongo.Collection, tgID int) ([]models.Evaluation, error)
 	SelectAllEvaluations(coll *mongo.Collection) ([]models.Evaluation, error)
 	UpdateEvaluation(coll *mongo.Collection, tgID int, url string, evaluation models.Evaluation) (bool, error)
+	DeleteEvaluation(coll *mongo.Collection, tgID int, url string) (bool, error)
 }
 
 func New(host string, port int, user, password string) (*Client, error) {
@@ -264,14 +265,15 @@ func (c *Client) SelectEvaluation(coll *mongo.Collection, tgID int, url string) 
 
 func (c *Client) SelectEvaluations(coll *mongo.Collection, tgID int) ([]models.Evaluation, error) {
 
-	cursor, err := coll.Find(context.Background(), bson.E{Key: "tgID", Value: tgID})
+	cursor, err := coll.Find(context.Background(), bson.M{"tgID": tgID})
+
 	if err != nil {
 		return nil, err
 	}
 
 	var evaluations []models.Evaluation
 
-	if err := cursor.All(context.Background(), &evaluations); err != nil {
+	if err = cursor.All(context.Background(), &evaluations); err != nil {
 		return nil, err
 	}
 
@@ -311,4 +313,15 @@ func (c *Client) UpdateEvaluation(coll *mongo.Collection, tgID int, url string, 
 	}
 
 	return updateResult.ModifiedCount > 0, nil
+}
+
+func (c *Client) DeleteEvaluation(coll *mongo.Collection, tgID int, url string) (bool, error) {
+
+	deleted, err := coll.DeleteOne(context.Background(), bson.M{"tgID": tgID, "url": url})
+
+	if err != nil {
+		return false, err
+	}
+
+	return deleted.DeletedCount > 0, nil
 }

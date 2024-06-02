@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/fsm"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/config"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/repository/mongodb"
@@ -15,7 +16,7 @@ const (
 	menu                 = "menu"
 	confInfo             = "confInfo"
 	viewReports          = "viewReports"
-	changeIdentification = "changeIdentification"
+	updateIdentification = "updateIdentification"
 	uploadSchedule       = "uploadSchedule"
 	back                 = "back"
 	downloadReviews      = "downloadReviews"
@@ -28,13 +29,16 @@ const (
 	finalStep            = "finalStep"
 	backToContent        = "backToContent"
 	threePoints          = "..."
+	userEvaluations      = "userEvaluations"
+	updEv                = "updEv"
+	dlEv                 = "dlEv"
 )
 
 func Set(dispatcher *ext.Dispatcher, c Client) {
 	dispatcher.AddHandler(handlers.NewCommand(start, c.startHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(confInfo), c.confInfoCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(viewReports), c.viewReportsCBHandler))
-	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(changeIdentification), c.changeIdentificationCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(updateIdentification), c.changeIdentificationCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(uploadSchedule), c.uploadScheduleCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(back), c.backCBHandler))
 	dispatcher.AddHandler(handlers.NewMessage(message.Text, c.textHandler))
@@ -59,6 +63,10 @@ func Set(dispatcher *ext.Dispatcher, c Client) {
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(finalStep), c.evaluateEndNoCommentCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(noWishToMark), c.noWishToMarkCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(noMark), c.noMarkCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(userEvaluations), c.userEvaluationsCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", updEv)), c.updateEvaluationCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", dlEv)), c.deleteEvaluationCBHandler))
+
 }
 
 type Client struct {

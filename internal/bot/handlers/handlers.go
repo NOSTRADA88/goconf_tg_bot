@@ -54,7 +54,7 @@ func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 			return err
 		}
 
-	case changeIdentification, confInfo:
+	case updateIdentification, confInfo:
 
 		errS := c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, menu)
 
@@ -242,7 +242,7 @@ func (c *Client) textHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 			}
 
 		}
-	case changeIdentification:
+	case updateIdentification:
 
 		if strings.HasPrefix(ctx.EffectiveMessage.Text, "/") {
 
@@ -561,19 +561,19 @@ func (c *Client) fileHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 			wg.Wait()
 		}
 
-		_, errS := bot.SendMessage(ctx.EffectiveChat.Id, "Ваше расписание успешно загружено!", &gotgbot.SendMessageOpts{
+		_, err = bot.SendMessage(ctx.EffectiveChat.Id, "Ваше расписание успешно загружено!", &gotgbot.SendMessageOpts{
 			ParseMode:   html,
 			ReplyMarkup: backToMainMenuAdminKB(),
 		})
 
-		if errS != nil {
-			return errS
+		if err != nil {
+			return err
 		}
 	default:
-		_, errD := bot.DeleteMessage(ctx.EffectiveChat.Id, ctx.EffectiveMessage.MessageId, nil)
+		_, err = bot.DeleteMessage(ctx.EffectiveChat.Id, ctx.EffectiveMessage.MessageId, nil)
 
-		if errD != nil {
-			return errD
+		if err != nil {
+			return err
 		}
 	}
 	return nil
@@ -584,7 +584,7 @@ func (c *Client) changeIdentificationCBHandler(bot *gotgbot.Bot, ctx *ext.Contex
 
 	var err error
 
-	err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, changeIdentification)
+	err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, updateIdentification)
 
 	if err != nil {
 		return err
@@ -612,7 +612,7 @@ func (c *Client) changeIdentificationCBHandler(bot *gotgbot.Bot, ctx *ext.Contex
 func (c *Client) indexHandlerCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 	cb := ctx.Update.CallbackQuery
 
-	if _, err := cb.Answer(bot, &gotgbot.AnswerCallbackQueryOpts{Text: "Это номер доклада"}); err != nil {
+	if _, err := cb.Answer(bot, &gotgbot.AnswerCallbackQueryOpts{Text: "Это номер доклада в программе"}); err != nil {
 		return err
 	}
 
@@ -652,8 +652,14 @@ func (c *Client) viewReportsCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error 
 		return err
 	}
 
+	evaluations, err := c.Database.SelectEvaluations(c.Database.Collection("evaluation"), int(cb.From.Id))
+
+	if err != nil {
+		return err
+	}
+
 	_, _, err = cb.Message.EditText(bot, fmt.Sprintf("Доступные доклады:\n\n%s", reportsFormat), &gotgbot.EditMessageTextOpts{
-		ReplyMarkup: reportsWithFavoriteKB(reports, user),
+		ReplyMarkup: reportsWithFavoriteKB(reports, user, evaluations),
 	})
 
 	if err != nil {
@@ -668,32 +674,38 @@ func (c *Client) addToFavoriteCBHandler(bot *gotgbot.Bot, ctx *ext.Context) erro
 
 	cb := ctx.Update.CallbackQuery
 
-	reports, errS := c.Database.SelectReports(c.Database.Collection("report"))
+	reports, err := c.Database.SelectReports(c.Database.Collection("report"))
 
-	if errS != nil {
-		return errS
+	if err != nil {
+		return err
 	}
 
 	for _, report := range reports {
 		if report.URL == strings.Split(cb.Data, ";")[1] {
-			err := c.Database.AddUserFavReports(c.Database.Collection("user"), int(cb.From.Id), report)
+			err = c.Database.AddUserFavReports(c.Database.Collection("user"), int(cb.From.Id), report)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	user, errS := c.Database.SelectUser(c.Database.Collection("user"), int(cb.From.Id))
+	user, err := c.Database.SelectUser(c.Database.Collection("user"), int(cb.From.Id))
 
-	if errS != nil {
-		return errS
-	}
-
-	if _, _, err := cb.Message.EditReplyMarkup(bot, &gotgbot.EditMessageReplyMarkupOpts{ReplyMarkup: reportsWithFavoriteKB(reports, user)}); err != nil {
+	if err != nil {
 		return err
 	}
 
-	if _, err := cb.Answer(bot, &gotgbot.AnswerCallbackQueryOpts{Text: "Доклад успешно добавлен в избранное!"}); err != nil {
+	evaluations, err := c.Database.SelectEvaluations(c.Database.Collection("evaluation"), int(cb.From.Id))
+
+	if err != nil {
+		return err
+	}
+
+	if _, _, err = cb.Message.EditReplyMarkup(bot, &gotgbot.EditMessageReplyMarkupOpts{ReplyMarkup: reportsWithFavoriteKB(reports, user, evaluations)}); err != nil {
+		return err
+	}
+
+	if _, err = cb.Answer(bot, &gotgbot.AnswerCallbackQueryOpts{Text: "Доклад успешно добавлен в избранное!"}); err != nil {
 		return err
 	}
 
@@ -704,33 +716,39 @@ func (c *Client) removeFromFavoriteCBHandler(bot *gotgbot.Bot, ctx *ext.Context)
 
 	cb := ctx.Update.CallbackQuery
 
-	reports, errS := c.Database.SelectReports(c.Database.Collection("report"))
+	reports, err := c.Database.SelectReports(c.Database.Collection("report"))
 
-	if errS != nil {
+	if err != nil {
 
-		return errS
+		return err
 	}
 
 	for _, report := range reports {
 		if report.URL == strings.Split(cb.Data, ";")[1] {
-			err := c.Database.RemoveUserFavReport(c.Database.Collection("user"), int(cb.From.Id), report.URL)
+			err = c.Database.RemoveUserFavReport(c.Database.Collection("user"), int(cb.From.Id), report.URL)
 			if err != nil {
 				return err
 			}
 		}
 	}
 
-	user, errS := c.Database.SelectUser(c.Database.Collection("user"), int(cb.From.Id))
+	user, err := c.Database.SelectUser(c.Database.Collection("user"), int(cb.From.Id))
 
-	if errS != nil {
-		return errS
-	}
-
-	if _, _, err := cb.Message.EditReplyMarkup(bot, &gotgbot.EditMessageReplyMarkupOpts{ReplyMarkup: reportsWithFavoriteKB(reports, user)}); err != nil {
+	if err != nil {
 		return err
 	}
 
-	if _, err := cb.Answer(bot, &gotgbot.AnswerCallbackQueryOpts{Text: "Доклад убран из избранного!"}); err != nil {
+	evaluations, err := c.Database.SelectEvaluations(c.Database.Collection("evaluation"), int(cb.From.Id))
+
+	if err != nil {
+		return err
+	}
+
+	if _, _, err = cb.Message.EditReplyMarkup(bot, &gotgbot.EditMessageReplyMarkupOpts{ReplyMarkup: reportsWithFavoriteKB(reports, user, evaluations)}); err != nil {
+		return err
+	}
+
+	if _, err = cb.Answer(bot, &gotgbot.AnswerCallbackQueryOpts{Text: "Доклад убран из избранного!"}); err != nil {
 		return err
 	}
 
@@ -845,16 +863,16 @@ func (c *Client) evaluateReportCBHandler(bot *gotgbot.Bot, ctx *ext.Context) err
 	}
 
 	text := fmt.Sprintf("Вы оцениваете следующий доклад:\n\n%s - %s\n\nКакую оценку вы бы поставили за содержание доклада:", report.Speakers, report.Title)
-	_, _, errE := cb.Message.EditText(bot, text,
+	_, _, err = cb.Message.EditText(bot, text,
 		&gotgbot.EditMessageTextOpts{
 			ReplyMarkup: evaluateKB(),
 		})
 
-	if errE != nil {
-		return errE
+	if err != nil {
+		return err
 	}
 
-	if err := c.FSM.SetState(context.Background(), cb.From.Id, fmt.Sprintf("evaluateReport;%s;%s", url, text)); err != nil {
+	if err = c.FSM.SetState(context.Background(), cb.From.Id, fmt.Sprintf("evaluateReport;%s;%s", url, text)); err != nil {
 		return err
 	}
 
@@ -905,7 +923,7 @@ func (c *Client) performanceCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error 
 		return err
 	}
 
-	if err := c.FSM.SetState(context.Background(), cb.From.Id, fmt.Sprintf("%s;%s", state, markForContent)); err != nil {
+	if err = c.FSM.SetState(context.Background(), cb.From.Id, fmt.Sprintf("%s;%s", state, markForContent)); err != nil {
 		return err
 	}
 
@@ -930,17 +948,17 @@ func (c *Client) backToContentCBHandler(bot *gotgbot.Bot, ctx *ext.Context) erro
 			return err
 		}
 
-		_, _, errE := cb.Message.EditText(bot, stateSeparated[2], &gotgbot.EditMessageTextOpts{
+		_, _, err = cb.Message.EditText(bot, stateSeparated[2], &gotgbot.EditMessageTextOpts{
 			ChatId:      ctx.EffectiveChat.Id,
 			MessageId:   ctx.EffectiveMessage.MessageId,
 			ReplyMarkup: evaluateKB(),
 		})
 
-		if errE != nil {
-			return errE
+		if err != nil {
+			return err
 		}
 
-		err := c.FSM.SetState(context.Background(), cb.From.Id, strings.Join(stateSeparated[:3], ";")+";")
+		err = c.FSM.SetState(context.Background(), cb.From.Id, strings.Join(stateSeparated[:3], ";")+";")
 
 		if err != nil {
 			return err
@@ -981,7 +999,6 @@ func (c *Client) customMsgCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 }
 
 func (c *Client) evaluateEndNoCommentCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
-	// todo adsa
 	cb := ctx.Update.CallbackQuery
 
 	state, err := c.FSM.GetState(context.Background(), cb.From.Id)
@@ -1063,6 +1080,108 @@ func (c *Client) noMarkCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (c *Client) userEvaluationsCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
+
+	cb := ctx.Update.CallbackQuery
+
+	err := c.FSM.SetState(context.Background(), cb.From.Id, userEvaluations)
+
+	if err != nil {
+		return err
+	}
+
+	evaluations, err := c.Database.SelectEvaluations(c.Database.Collection("evaluation"), int(cb.From.Id))
+
+	var text string
+
+	reports, err := c.Database.SelectReports(c.Database.Collection("report"))
+
+	evaluationsMap := make(map[string]bool, len(evaluations))
+
+	for _, evaluation := range evaluations {
+		if _, exists := evaluationsMap[evaluation.URL]; !exists {
+			evaluationsMap[evaluation.URL] = true
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+
+	for ind, report := range reports {
+		if _, exists := evaluationsMap[report.URL]; exists {
+			text += fmt.Sprintf("%v. %s - %s\n\n", ind+1, report.Speakers, report.Title)
+		}
+	}
+
+	_, _, err = cb.Message.EditText(bot, fmt.Sprintf("Ваши отзывы:\n\n%s", text), &gotgbot.EditMessageTextOpts{
+		ReplyMarkup: userEvaluationsKB(reports, evaluationsMap),
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) updateEvaluationCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
+
+	cb := ctx.Update.CallbackQuery
+
+	cbSeparated := strings.Split(cb.Data, ";")
+
+	url := cbSeparated[1]
+
+	fmt.Println(url)
+
+	err := c.FSM.SetState(context.Background(), cb.From.Id, cbSeparated[0])
+
+	if err != nil {
+		return err
+	}
+
+	_, _, err = cb.Message.EditText(bot, "work in progress", nil)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) deleteEvaluationCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
+
+	cb := ctx.Update.CallbackQuery
+
+	cbSeparated := strings.Split(cb.Data, ";")
+
+	err := c.FSM.SetState(context.Background(), cb.From.Id, cbSeparated[0])
+
+	if err != nil {
+		return err
+	}
+
+	url := cbSeparated[1]
+
+	deleted, err := c.Database.DeleteEvaluation(c.Database.Collection("evaluation"), int(cb.From.Id), url)
+
+	if err != nil {
+		return err
+	}
+
+	if deleted {
+		_, _, err = cb.Message.EditText(bot, "Ваш отзыв удалён! Если передумайте, то всегда можете написать новый", &gotgbot.EditMessageTextOpts{
+			ReplyMarkup: afterMarkKB(),
+		})
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

@@ -1,16 +1,6 @@
--  [Getting Started](#getting-started)
--  [Project Structure](#project-structure)
--  [Used libraries](#used-libraries)
-
-
-## Getting Started
-This is a telegram bot for _GolangConf 2024_.
-
-#### _Few easy steps to start a project :_
-1. #### `git pull https://github.com/NOSTRADA88/telegram-bot-go`
-2. #### `Create and set up your own ".env" file (in the pulled directory). In project, you can find an ".env.example", make sure that you are using THE SAME VARIABLES= as they named in the example file.`
-3. #### `If ".env" is ready, then type in cmd line` `docker-compose build` 
-4. #### `docker-compose up -d`
+- [Used libraries](#used-libraries)
+- [Project Structure](#project-structure)
+- [Getting Started](#getting-started)
 
 
 ## Used libraries
@@ -43,4 +33,11 @@ This is a telegram bot for _GolangConf 2024_.
 
 - **go.mod** and **go.sum**: Go module files for managing dependencies.
 
+## Getting Started
+This is a telegram bot for _GolangConf 2024_.
 
+#### Few easy steps to start a project :
+1. `git pull https://github.com/NOSTRADA88/telegram-bot-go`
+2. `Create and set up your own ".env" file (in the pulled directory). In project, you can find an ".env.example", make sure that you are using THE SAME VARIABLES= as they named in the example file.`
+3. `If ".env" is ready, then type in cmd line` `docker-compose build`
+4. `docker-compose up -d`
