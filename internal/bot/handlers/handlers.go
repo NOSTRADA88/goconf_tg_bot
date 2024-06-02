@@ -4,18 +4,21 @@ import (
 	"bufio"
 	"context"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/models"
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
 )
 
 const (
-	html = "html"
+	html     = "html"
+	dataJSON = "data.json"
 )
 
 func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
@@ -174,7 +177,7 @@ func (c *Client) textHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 		coll := c.Database.Collection("user")
 
 		err = c.Database.InsertOne(coll, models.User{
-			TgID: int(ctx.EffectiveUser.Id), Identification: ctx.EffectiveMessage.Text, FavoriteReports: []models.Report{}})
+			TgID: int(ctx.EffectiveUser.Id), Identification: ctx.EffectiveMessage.Text, FavoriteReports: []models.Report{}, ChatID: int(ctx.EffectiveChat.Id)})
 
 		if err != nil {
 			return err
@@ -1323,5 +1326,141 @@ func (c *Client) updateWithNoCommentCBHandler(bot *gotgbot.Bot, ctx *ext.Context
 		}
 	}
 
+	return nil
+}
+
+func (c *Client) checkAndNotify(bot *gotgbot.Bot) {
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			err := c.notifyUpcomingReports(bot)
+			if err != nil {
+				fmt.Println("Error notifying users:", err)
+			}
+		}
+	}
+}
+
+func (c *Client) notifyUpcomingReports(bot *gotgbot.Bot) error {
+	reports, err := c.Database.SelectReports(c.Database.Collection("report"))
+	if err != nil {
+		return err
+	}
+
+	users, err := c.Database.SelectUsers(c.Database.Collection("user"))
+	if err != nil {
+		return err
+	}
+
+	location, err := time.LoadLocation("Europe/Moscow")
+	if err != nil {
+		return err
+	}
+
+	now := time.Now().In(location)
+	for _, report := range reports {
+		startTime := report.StartTime.In(location)
+		if startTime.After(now) && startTime.Before(now.Add(10*time.Minute)) {
+			message := fmt.Sprintf("Доклад \"%s\" начнется через 10 минут.\nСпикер: %s\nНачало в %s", report.Title, report.Speakers, startTime.Format("15:04"))
+			for _, user := range users {
+				_, err := bot.SendMessage(int64(user.TgID), message, nil)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *Client) downloadReviewsCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
+
+	cb := ctx.Update.CallbackQuery
+
+	reports, err := c.Database.SelectReports(c.Database.Collection("report"))
+
+	if err != nil {
+		return err
+	}
+
+	evaluations, err := c.Database.SelectAllEvaluations(c.Database.Collection("evaluation"))
+
+	if err != nil {
+		return err
+	}
+
+	evaluationsMap := make(map[string]models.Evaluation, len(evaluations))
+
+	for _, evaluation := range evaluations {
+		if _, exists := evaluationsMap[evaluation.URL]; !exists {
+			evaluationsMap[evaluation.URL] = evaluation
+		}
+	}
+
+	var actualEvaluations []models.Evaluation
+
+	for _, report := range reports {
+		if evaluation, exists := evaluationsMap[report.URL]; exists {
+			actualEvaluations = append(actualEvaluations, evaluation)
+		}
+	}
+
+	jsonData, err := json.Marshal(actualEvaluations)
+
+	if err != nil {
+		return err
+	}
+
+	file, err := os.Create(dataJSON)
+
+	if err != nil {
+		return err
+	}
+
+	_, err = file.Write(jsonData)
+
+	if err != nil {
+		return err
+	}
+
+	err = file.Close()
+
+	if err != nil {
+		return err
+	}
+
+	file, err = os.Open(dataJSON)
+
+	if err != nil {
+		return err
+	}
+
+	defer func() {
+		err = os.Remove(file.Name())
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+	var wg sync.WaitGroup
+	msg, err := bot.SendDocument(cb.From.Id, file, &gotgbot.SendDocumentOpts{Caption: "Отзывы для текущих докладов"})
+
+	if err != nil {
+		return err
+	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		time.Sleep(60 * time.Second)
+		_, err = bot.DeleteMessage(msg.Chat.Id, msg.MessageId, nil)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
+	wg.Wait()
 	return nil
 }

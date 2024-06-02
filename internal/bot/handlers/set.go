@@ -73,6 +73,7 @@ func Set(dispatcher *ext.Dispatcher, c Client) {
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", updateContent)), c.updateContentCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", updatePerformance)), c.updatePerformanceCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(updateNoComment), c.updateWithNoCommentCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(downloadReviews), c.downloadReviewsCBHandler))
 }
 
 type Client struct {
