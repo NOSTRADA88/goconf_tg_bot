@@ -23,15 +23,19 @@ const (
 	index                = "index"
 	evaluateReport       = "evaluateReport"
 	notEvaluateReport    = "notEvaluateReport"
-	mark                 = "mark"
-	noWishToMark         = "noWishToMark"
-	noMark               = "noMark"
-	finalStep            = "finalStep"
+	evaluationBegin      = "evaluationBegin"
+	noWishToEvaluate     = "noWishToEvaluate"
+	noEvaluate           = "noEvaluate"
+	evaluationEnd        = "evaluationEnd"
 	backToContent        = "backToContent"
 	threePoints          = "..."
 	userEvaluations      = "userEvaluations"
-	updEv                = "updEv"
-	dlEv                 = "dlEv"
+	updateEvaluation     = "updateEvaluation"
+	deleteEvaluation     = "deleteEvaluation"
+	updateContent        = "updateContent"
+	updatePerformance    = "updatePerformance"
+	updateComment        = "updateComment"
+	//updateNoComment      = "updateNoComment"
 )
 
 func Set(dispatcher *ext.Dispatcher, c Client) {
@@ -56,17 +60,19 @@ func Set(dispatcher *ext.Dispatcher, c Client) {
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(threePoints), c.threePointsCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(notEvaluateReport), c.notEvaluateCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(evaluateReport), c.evaluateReportCBHandler))
-	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(mark), c.contentCBHandler))
-	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix("content;"), c.performanceCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(evaluationBegin), c.evaluationBeginCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix("content;"), c.contentCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(backToContent), c.backToContentCBHandler))
-	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix("performance;"), c.customMsgCBHandler))
-	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(finalStep), c.evaluateEndNoCommentCBHandler))
-	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(noWishToMark), c.noWishToMarkCBHandler))
-	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(noMark), c.noMarkCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix("performance;"), c.performanceCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(evaluationEnd), c.evaluateEndNoCommentCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(noWishToEvaluate), c.noWishToEvaluateCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(noEvaluate), c.noEvaluateCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(userEvaluations), c.userEvaluationsCBHandler))
-	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", updEv)), c.updateEvaluationCBHandler))
-	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", dlEv)), c.deleteEvaluationCBHandler))
-
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", updateEvaluation)), c.updateEvaluationCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", deleteEvaluation)), c.deleteEvaluationCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", updateContent)), c.updateContentCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", updatePerformance)), c.updatePerformanceCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(updateComment), c.updateWithNoCommentCBHandler))
 }
 
 type Client struct {
