@@ -24,7 +24,7 @@ type Client struct {
 
 // NewClient function creates and returns Client pointer
 func NewClient(host string, port int) *Client {
-	rdb := redis.NewClient(&redis.Options{Addr: fmt.Sprintf("%s:%v", host, port)})
+	rdb := redis.NewClient(&redis.Options{Addr: fmt.Sprintf("%s:%v", host, port), Password: "", DB: 0})
 	return &Client{Rdb: rdb}
 }
 

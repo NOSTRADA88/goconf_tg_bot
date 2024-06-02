@@ -1,3 +1,6 @@
 .env.example
 README.md
 test.scv
+
+mongo-data
+redis-data
