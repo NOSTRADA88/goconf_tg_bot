@@ -305,7 +305,7 @@ func performanceUpdateKB() gotgbot.InlineKeyboardMarkup {
 func commentUpdateKB() gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{
-			{Text: "Далее", CallbackData: updateComment},
+			{Text: "Далее", CallbackData: updateNoComment},
 		},
 		{
 			{Text: "К отзывам", CallbackData: userEvaluations},

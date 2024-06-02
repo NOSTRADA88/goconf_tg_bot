@@ -19,7 +19,6 @@ const (
 )
 
 func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
-	var err error
 
 	state, err := c.FSM.GetState(context.Background(), ctx.EffectiveUser.Id)
 
@@ -54,12 +53,12 @@ func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 			return err
 		}
 
-	case updateIdentification, confInfo:
+	case updateIdentification:
 
-		errS := c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, menu)
+		err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, menu)
 
-		if errS != nil {
-			return errS
+		if err != nil {
+			return err
 		}
 
 		user, errS := c.Database.SelectUser(c.Database.Collection("user"), int(ctx.EffectiveUser.Id))
@@ -98,15 +97,21 @@ func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 	case start:
 		if strings.HasPrefix(ctx.EffectiveMessage.Text, "/") {
 
-			_, errS := bot.SendMessage(ctx.EffectiveChat.Id, "Простите, но имя не может начинаться с \"/\". Введите, что-нибудь другое... билет... ФИО или вашу почту.", nil)
+			_, err = bot.SendMessage(ctx.EffectiveChat.Id, "Простите, но имя не может начинаться с \"/\". Введите, что-нибудь другое... билет... ФИО или вашу почту.", nil)
 
-			if errS != nil {
-				return errS
+			if err != nil {
+				return err
 			}
 
 			return nil
 		}
 	default:
+		err = c.FSM.SetState(context.Background(), ctx.Message.From.Id, menu)
+
+		if err != nil {
+			return err
+		}
+
 		user, errS := c.Database.SelectUser(c.Database.Collection("user"), int(ctx.EffectiveUser.Id))
 
 		if errS != nil {
@@ -115,7 +120,7 @@ func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 		if _, exists := c.Cfg.Administrators.IDsInMap[int(ctx.Message.From.Id)]; exists {
 			_, err = bot.SendMessage(ctx.Message.Chat.Id,
-				fmt.Sprintf("Снова здравствуй, уважаемый %s. Честно, сам не знаю, чтобы я хотел, будь я тобой. Попробуй понажимать на другие кнопки что ли...", user.Identification),
+				fmt.Sprintf("Приветствую %s. Вы уже успели ознакомится со списком докладов ? Если нет, то крайне рекомендую, сегодня выступают отличные спикеры!", user.Identification),
 				&gotgbot.SendMessageOpts{
 					ParseMode:   html,
 					ReplyMarkup: mainMenuAdminKB(),
@@ -127,7 +132,7 @@ func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 		} else {
 			_, err = bot.SendMessage(ctx.Message.Chat.Id,
-				fmt.Sprintf("Снова здравствуй, уважаемый %s. Честно, сам не знаю, чтобы я хотел, будь я тобой. Попробуй понажимать на другие кнопки что ли...", user.Identification, bot.User.Username),
+				fmt.Sprintf("Приветствую %s. Вы уже успели ознакомится со списком докладов ? Если нет, то крайне рекомендую, сегодня выступают отличные спикеры!", user.Identification),
 				&gotgbot.SendMessageOpts{
 					ParseMode:   html,
 					ReplyMarkup: mainMenuUserKB(),
@@ -156,7 +161,7 @@ func (c *Client) textHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 	case start:
 		if strings.HasPrefix(ctx.EffectiveMessage.Text, "/") {
 
-			_, errS := bot.SendMessage(ctx.EffectiveChat.Id, "Простите, но имя не может начинаться с \"/\". Введите, что-нибудь другое... билет... ФИО или вашу почту.",
+			_, errS := bot.SendMessage(ctx.EffectiveChat.Id, "Простите, но имя не может начинаться с \"/\". Введите, билет, ФИО или вашу почту.",
 				nil)
 
 			if errS != nil {
@@ -168,11 +173,11 @@ func (c *Client) textHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 		coll := c.Database.Collection("user")
 
-		errI := c.Database.InsertOne(coll, models.User{
+		err = c.Database.InsertOne(coll, models.User{
 			TgID: int(ctx.EffectiveUser.Id), Identification: ctx.EffectiveMessage.Text, FavoriteReports: []models.Report{}})
 
-		if errI != nil {
-			return errI
+		if err != nil {
+			return err
 		}
 
 		if err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, menu); err != nil {
@@ -304,13 +309,24 @@ func (c *Client) textHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 				return err
 			}
 		}
+
 		if len(strings.Split(state, ";")) == 4 && strings.Split(state, ";")[0] == updateEvaluation {
+
 			stateSeparated := strings.Split(state, ";")
+
 			text := ctx.EffectiveMessage.Text
+
 			evaluation := models.Evaluation{URL: stateSeparated[1], TgID: int(ctx.Message.From.Id),
 				Content: stateSeparated[2], Performance: stateSeparated[3],
 				Comment: text}
+
 			upd, err := c.Database.UpdateEvaluation(c.Database.Collection("evaluation"), int(ctx.Message.From.Id), stateSeparated[1], evaluation)
+
+			if err != nil {
+				return err
+			}
+
+			err = c.FSM.SetState(context.Background(), ctx.Message.From.Id, updateComment)
 
 			if err != nil {
 				return err
@@ -324,16 +340,24 @@ func (c *Client) textHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 				if err != nil {
 					return err
 				}
+			} else {
+				_, err = bot.SendMessage(ctx.EffectiveChat.Id, "Ваш отзыв ни чем не отличается от прошлого!", &gotgbot.SendMessageOpts{
+					ReplyMarkup: evaluationEndKB(),
+					ParseMode:   html,
+				})
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
+
 	return nil
 }
 
 func (c *Client) confInfoCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
-	var err error
 
-	err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, confInfo)
+	err := c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, confInfo)
 	if err != nil {
 		return err
 	}
@@ -353,9 +377,8 @@ func (c *Client) confInfoCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 }
 
 func (c *Client) backCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
-	var err error
 
-	err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, menu)
+	err := c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, menu)
 
 	if err != nil {
 		return err
@@ -365,7 +388,7 @@ func (c *Client) backCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	if _, exists := c.Cfg.Administrators.IDsInMap[int(cb.From.Id)]; exists {
 		_, _, err = cb.Message.EditText(bot,
-			"Вы вернулись в главное меню, как удобно... что я контролирую ваши нажатия. ",
+			"Вы вернулись в главное меню. Как удобно, что я обрабатываю все ваши сценрии использования.",
 			&gotgbot.EditMessageTextOpts{ParseMode: html, ReplyMarkup: mainMenuAdminKB()})
 
 		if err != nil {
@@ -374,7 +397,7 @@ func (c *Client) backCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	} else {
 		_, _, err = cb.Message.EditText(bot,
-			"Вы вернулись в главное меню, как удобно... что я контролирую ваши нажатия. ",
+			"Вы вернулись в главное меню. Как удобно, что я обрабатываю все ваши сценрии использования.",
 			&gotgbot.EditMessageTextOpts{ParseMode: html, ReplyMarkup: mainMenuUserKB()})
 
 		if err != nil {
@@ -388,9 +411,7 @@ func (c *Client) backCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 func (c *Client) uploadScheduleCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
-	var err error
-
-	err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, uploadSchedule)
+	err := c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, uploadSchedule)
 
 	if err != nil {
 		return err
@@ -565,7 +586,7 @@ func (c *Client) fileHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 			}
 			for _, user := range users {
 				if user.TgID != int(ctx.EffectiveUser.Id) {
-					msg, errSM := bot.SendMessage(ctx.EffectiveChat.Id, "Некоторые доклады были удалены. Пожалуйста, ознакомьтесь с новым списком докладов в \"👀 Посмотреть доклады\"", nil)
+					msg, errSM := bot.SendMessage(ctx.EffectiveChat.Id, "Некоторые доклады были удалены. Пожалуйста, ознакомьтесь с изменённым списком докладов в \"👀 Посмотреть доклады\"", nil)
 					if errSM != nil {
 						return errSM
 					}
@@ -604,9 +625,7 @@ func (c *Client) fileHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 func (c *Client) changeIdentificationCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
-	var err error
-
-	err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, updateIdentification)
+	err := c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, updateIdentification)
 
 	if err != nil {
 		return err
@@ -620,7 +639,7 @@ func (c *Client) changeIdentificationCBHandler(bot *gotgbot.Bot, ctx *ext.Contex
 
 	cb := ctx.Update.CallbackQuery
 
-	if _, _, err = cb.Message.EditText(bot, fmt.Sprintf("%s, введите, пожалуйста, ваш  билет/почту/ФИО (одно на выбор)", user.Identification),
+	if _, _, err = cb.Message.EditText(bot, fmt.Sprintf("Сейчас вы известным мне как %s. Введите, пожалуйста, ваш  билет/почту/ФИО (одно на выбор)", user.Identification),
 		&gotgbot.EditMessageTextOpts{
 			ParseMode:   html,
 			ReplyMarkup: backToMainMenuKB(),
@@ -643,9 +662,7 @@ func (c *Client) indexHandlerCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error
 
 func (c *Client) viewReportsCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
-	var err error
-
-	err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, viewReports)
+	err := c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, viewReports)
 
 	if err != nil {
 		return err
@@ -661,11 +678,11 @@ func (c *Client) viewReportsCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error 
 
 	reportsFormat := getFormatReports(data)
 
-	reports, errS := c.Database.SelectReports(c.Database.Collection("report"))
+	reports, err := c.Database.SelectReports(c.Database.Collection("report"))
 
-	if errS != nil {
+	if err != nil {
 
-		return errS
+		return err
 	}
 
 	user, err := c.Database.SelectUser(c.Database.Collection("user"), int(ctx.EffectiveUser.Id))

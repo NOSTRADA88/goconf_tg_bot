@@ -35,7 +35,7 @@ const (
 	updateContent        = "updateContent"
 	updatePerformance    = "updatePerformance"
 	updateComment        = "updateComment"
-	//updateNoComment      = "updateNoComment"
+	updateNoComment      = "updateNoComment"
 )
 
 func Set(dispatcher *ext.Dispatcher, c Client) {
@@ -72,7 +72,7 @@ func Set(dispatcher *ext.Dispatcher, c Client) {
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", deleteEvaluation)), c.deleteEvaluationCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", updateContent)), c.updateContentCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Prefix(fmt.Sprintf("%s;", updatePerformance)), c.updatePerformanceCBHandler))
-	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(updateComment), c.updateWithNoCommentCBHandler))
+	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(updateNoComment), c.updateWithNoCommentCBHandler))
 }
 
 type Client struct {
