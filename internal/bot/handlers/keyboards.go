@@ -84,6 +84,11 @@ func reportsWithFavoriteKB(reports []models.Report, user models.User, evaluation
 		println(err)
 	}
 
+	reportURLs := make(map[string]bool, len(reports))
+	for _, report := range reports {
+		reportURLs[report.URL] = true
+	}
+
 	if len(user.FavoriteReports) == 0 {
 		for ind, report := range reports {
 
@@ -112,10 +117,13 @@ func reportsWithFavoriteKB(reports []models.Report, user models.User, evaluation
 
 		}
 
-		if len(evaluations) != 0 {
-			kb = append(kb, []gotgbot.InlineKeyboardButton{
-				{Text: "Мои отзывы", CallbackData: userEvaluations},
-			})
+		for _, evaluation := range evaluations {
+			if _, exists := reportURLs[evaluation.URL]; exists {
+				kb = append(kb, []gotgbot.InlineKeyboardButton{
+					{Text: "Мои отзывы", CallbackData: userEvaluations},
+				})
+				break
+			}
 		}
 
 	} else {
@@ -168,12 +176,14 @@ func reportsWithFavoriteKB(reports []models.Report, user models.User, evaluation
 			})
 		}
 
-		if len(evaluations) != 0 {
-			kb = append(kb, []gotgbot.InlineKeyboardButton{
-				{Text: "Мои отзывы", CallbackData: userEvaluations},
-			})
+		for _, evaluation := range evaluations {
+			if _, exists := reportURLs[evaluation.URL]; exists {
+				kb = append(kb, []gotgbot.InlineKeyboardButton{
+					{Text: "Мои отзывы", CallbackData: userEvaluations},
+				})
+				break
+			}
 		}
-
 	}
 
 	kb = append(kb, []gotgbot.InlineKeyboardButton{
