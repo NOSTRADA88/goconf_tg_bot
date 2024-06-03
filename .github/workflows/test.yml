@@ -1,0 +1,47 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:8.0.0-rc4-jammy
+        env:
+          MONGO_INITDB_ROOT_USERNAME: ${{ secrets.DB_USER }}
+          MONGO_INITDB_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        ports:
+          - ${{ secrets.DB_PORT }}
+      redis:
+        image: redis:7.2.4-alpine
+        ports:
+          - ${{ secrets.REDIS_PORT }}
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.22.0
+
+      - name: Test
+        run: go test ./...
+        env:
+          DB_HOST: localhost
+          DB_PORT: ${{ secrets.DB_PORT }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          DB_USER: ${{ secrets.DB_USER }}
+          REDIS_HOST: localhost
+          REDIS_PORT: ${{ secrets.REDIS_PORT }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          ADMIN_IDS_LIST: ${{ secrets.ADMIN_IDS_LIST }}
+          CONFERENCE_NAME: ${{ secrets.CONFERENCE_NAME }}
+          CONFERENCE_URL: ${{ secrets.CONFERENCE_URL }}
+          CONFERENCE_FROM_TIME: ${{ secrets.CONFERENCE_FROM_TIME }}
+          CONFERENCE_UNTIL_TIME: ${{ secrets.CONFERENCE_UNTIL_TIME }}
+          CONFERENCE_REVIEWS_AVAILABLE_TIME: ${{ secrets.CONFERENCE_REVIEWS_AVAILABLE_TIME }}

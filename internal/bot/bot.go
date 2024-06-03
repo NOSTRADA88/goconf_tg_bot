@@ -29,17 +29,17 @@ func Start() error {
 	bot, err := gotgbot.NewBot(cfg.Token, nil)
 
 	if err != nil {
-		log.ErrorF("failed to created bot struct: %w", err)
+		log.ErrorF("failed to created bot struct: %v", err)
 	}
 
 	set, err := bot.SetMyCommands([]gotgbot.BotCommand{{"start", "Используйте для начала работы с ботом, а также, чтобы вернуться в основное меню"}}, nil)
 
 	if err != nil {
-		log.ErrorF("failed to set default commands: %w", err)
+		log.ErrorF("failed to set default commands: %v", err)
 	}
 
 	if set {
-		log.InfoF("default commands set successfully")
+		log.Info("default commands set successfully")
 	}
 
 	dispatcher := ext.NewDispatcher(&ext.DispatcherOpts{
@@ -61,12 +61,12 @@ func Start() error {
 	errInit := db.Init()
 
 	if errInit != nil {
-		log.Error("failed to init user with unique field tgID: %v", errInit)
+		log.ErrorF("failed to init user with unique field tgID: %v", errInit)
 	}
 
 	defer func() {
 		if errC := db.Close(); errC != nil {
-			log.WarnF("failed to close connection to mongo: %", errC)
+			log.WarnF("failed to close connection to mongo: %v", errC)
 		}
 	}()
 

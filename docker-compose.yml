@@ -8,7 +8,7 @@ services:
     container_name: tg-bot
     restart: always
     env_file:
-      - .env
+      - cmd/telegram-bot-go/.env
     depends_on:
       - mongo
       - redis
@@ -18,7 +18,7 @@ services:
     container_name: mongo
     restart: always
     env_file:
-      - .env
+      - cmd/telegram-bot-go/.env
     volumes:
       - ./mongo-data:/data/db
     environment:
@@ -32,7 +32,7 @@ services:
     container_name: redis
     restart: always
     env_file:
-      - .env
+      - cmd/telegram-bot-go/.env
     volumes:
       - ./redis-data:/data
     ports:

@@ -1,5 +1,8 @@
 .idea
-.env
+cmd/telegram-bot-go/.env
+
+internal/config/.env
 
 mongo-data
 redis-data
+
