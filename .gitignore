@@ -1,6 +1,6 @@
 .idea
 cmd/telegram-bot-go/.env
-
+.env
 mongo-data
 redis-data
 
