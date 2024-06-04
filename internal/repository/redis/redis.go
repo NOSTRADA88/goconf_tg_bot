@@ -14,6 +14,7 @@ const Nil = redis.Nil
 
 // CacheClient is an interface that defines methods for a caching client.
 type CacheClient interface {
+	Ping(ctx context.Context) error
 	Set(ctx context.Context, key int64, value interface{}, duration time.Duration) error // Set adds a value to the cache with a specified duration.
 	Get(ctx context.Context, key int64) (string, error)                                  // Get retrieves a value from the cache by key.
 }
@@ -41,4 +42,9 @@ func (c *Client) Get(ctx context.Context, key int64) (string, error) {
 // It returns an error if there is one.
 func (c *Client) Set(ctx context.Context, key int64, value interface{}, duration time.Duration) error {
 	return c.Rdb.Set(ctx, strconv.Itoa(int(key)), value, duration).Err()
+}
+
+// Ping method checks redis status: up or not.
+func (c *Client) Ping(ctx context.Context) error {
+	return c.Rdb.Ping(ctx).Err()
 }
