@@ -2,6 +2,7 @@ package mongodb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/models"
 	"go.mongodb.org/mongo-driver/bson"
@@ -14,18 +15,30 @@ type Client struct {
 }
 
 type DataManipulator interface {
+	ReportManipulator
+	UserManipulator
+	EvaluationManipulator
 	Init() error
 	Collection(collection string) *mongo.Collection
 	InsertOne(coll *mongo.Collection, data interface{}) error
+}
+
+type ReportManipulator interface {
 	InsertMany(coll *mongo.Collection, data []interface{}) (bool, bool, error)
 	SelectReport(coll *mongo.Collection, url string) (models.Report, error)
 	SelectReports(coll *mongo.Collection) ([]models.Report, error)
+}
+
+type UserManipulator interface {
 	SelectUser(coll *mongo.Collection, tgID int) (models.User, error)
 	SelectUsers(coll *mongo.Collection) ([]models.User, error)
 	UpdateUserID(coll *mongo.Collection, tgID int, identification string) (bool, error)
 	AddUserFavReports(coll *mongo.Collection, tgID int, report models.Report) error
 	RemoveUserFavReport(coll *mongo.Collection, tgID int, reportURL string) error
-	SelectEvaluation(coll *mongo.Collection, tgID int, url string) (models.Evaluation, error)
+}
+
+type EvaluationManipulator interface {
+	SelectEvaluation(coll *mongo.Collection, tgID int, url string) (bool, models.Evaluation, error)
 	SelectEvaluations(coll *mongo.Collection, tgID int) ([]models.Evaluation, error)
 	SelectAllEvaluations(coll *mongo.Collection) ([]models.Evaluation, error)
 	UpdateEvaluation(coll *mongo.Collection, tgID int, url string, evaluation models.Evaluation) (bool, error)
@@ -249,7 +262,7 @@ func (c *Client) SelectReport(coll *mongo.Collection, url string) (models.Report
 	return report, nil
 }
 
-func (c *Client) SelectEvaluation(coll *mongo.Collection, tgID int, url string) (models.Evaluation, error) {
+func (c *Client) SelectEvaluation(coll *mongo.Collection, tgID int, url string) (bool, models.Evaluation, error) {
 	var evaluation models.Evaluation
 
 	filter := bson.D{{"tgID", tgID}, {"url", url}}
@@ -257,10 +270,13 @@ func (c *Client) SelectEvaluation(coll *mongo.Collection, tgID int, url string) 
 	err := coll.FindOne(context.Background(), filter).Decode(&evaluation)
 
 	if err != nil {
-		return models.Evaluation{}, err
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			return false, models.Evaluation{}, nil
+		}
+		return false, models.Evaluation{}, err
 	}
 
-	return evaluation, nil
+	return true, evaluation, nil
 }
 
 func (c *Client) SelectEvaluations(coll *mongo.Collection, tgID int) ([]models.Evaluation, error) {

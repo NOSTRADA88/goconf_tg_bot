@@ -8,6 +8,7 @@ import (
 	"time"
 )
 
+// mainMenuAdminKB returns the main menu keyboard for admin users.
 func mainMenuAdminKB() gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{
@@ -29,6 +30,7 @@ func mainMenuAdminKB() gotgbot.InlineKeyboardMarkup {
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// mainMenuUserKB returns the main menu keyboard for regular users.
 func mainMenuUserKB() gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{
@@ -44,6 +46,7 @@ func mainMenuUserKB() gotgbot.InlineKeyboardMarkup {
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// backToMainMenuKB returns a keyboard with a button to go back to the main menu.
 func backToMainMenuKB() gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{
@@ -53,6 +56,7 @@ func backToMainMenuKB() gotgbot.InlineKeyboardMarkup {
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// backToMainMenuAdminKB returns a keyboard with a button to go back to the main menu for admin users.
 func backToMainMenuAdminKB() gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{
@@ -62,6 +66,7 @@ func backToMainMenuAdminKB() gotgbot.InlineKeyboardMarkup {
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// reportsWithFavoriteKB returns a keyboard with a list of reports, each report has buttons for adding to favorites and evaluating.
 func reportsWithFavoriteKB(reports []models.Report, user models.User, evaluations []models.Evaluation) gotgbot.InlineKeyboardMarkup {
 
 	if len(reports) == 0 {
@@ -193,6 +198,7 @@ func reportsWithFavoriteKB(reports []models.Report, user models.User, evaluation
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// evaluateKB returns a keyboard with options for evaluating a report.
 func evaluateKB() gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{
@@ -212,6 +218,7 @@ func evaluateKB() gotgbot.InlineKeyboardMarkup {
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// contentKB returns a keyboard for rating the content of a report.
 func contentKB(url string) gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{
@@ -226,6 +233,7 @@ func contentKB(url string) gotgbot.InlineKeyboardMarkup {
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// performanceKB returns a keyboard for rating the performance of a report.
 func performanceKB() gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{
@@ -239,6 +247,7 @@ func performanceKB() gotgbot.InlineKeyboardMarkup {
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// commentKB returns a keyboard for adding a comment to a report.
 func commentKB() gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{
@@ -251,6 +260,7 @@ func commentKB() gotgbot.InlineKeyboardMarkup {
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// evaluationEndKB returns a keyboard for ending the evaluation process.
 func evaluationEndKB() gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{
@@ -263,6 +273,7 @@ func evaluationEndKB() gotgbot.InlineKeyboardMarkup {
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// userEvaluationsKB returns a keyboard with a list of user's evaluations, each evaluation has buttons for updating and deleting.
 func userEvaluationsKB(reports []models.Report, evaluationMap map[string]models.Evaluation) gotgbot.InlineKeyboardMarkup {
 	var kb [][]gotgbot.InlineKeyboardButton
 
@@ -285,6 +296,7 @@ func userEvaluationsKB(reports []models.Report, evaluationMap map[string]models.
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// contentUpdateKB returns a keyboard for updating the content rating of a report.
 func contentUpdateKB() gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{
@@ -299,6 +311,7 @@ func contentUpdateKB() gotgbot.InlineKeyboardMarkup {
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// performanceUpdateKB returns a keyboard for updating the performance rating of a report.
 func performanceUpdateKB() gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{
@@ -312,6 +325,7 @@ func performanceUpdateKB() gotgbot.InlineKeyboardMarkup {
 	return gotgbot.InlineKeyboardMarkup{InlineKeyboard: kb}
 }
 
+// commentUpdateKB returns a keyboard for updating the comment of a report.
 func commentUpdateKB() gotgbot.InlineKeyboardMarkup {
 	kb := [][]gotgbot.InlineKeyboardButton{
 		{

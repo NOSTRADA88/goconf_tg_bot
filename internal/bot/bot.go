@@ -3,6 +3,7 @@ package bot
 import (
 	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/fsm"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/handlers"
+	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/notificator"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/config"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/logger"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/repository/mongodb"
@@ -32,7 +33,7 @@ func Start() error {
 		log.ErrorF("failed to created bot struct: %v", err)
 	}
 
-	set, err := bot.SetMyCommands([]gotgbot.BotCommand{{"start", "Используйте для начала работы с ботом, а также, чтобы вернуться в основное меню"}}, nil)
+	set, err := bot.SetMyCommands([]gotgbot.BotCommand{{"start", "Используйте для начала работы с ботом, а также, чтобы вернуться в основное меню"}, {"help", "Информация по использованию бота"}}, nil)
 
 	if err != nil {
 		log.ErrorF("failed to set default commands: %v", err)
@@ -78,12 +79,17 @@ func Start() error {
 
 	log.Info("database was connected successfully")
 
-	handlers.Set(dispatcher, handlers.Client{
-		FSM:      fsm.New(redis.NewClient(cfg.Redis.Host, cfg.Redis.Port)),
-		Cfg:      cfg,
-		Database: db})
+	client := handlers.Client{
+		FSM:           fsm.New(redis.New(cfg.Redis.Host, cfg.Redis.Port)),
+		Cfg:           cfg,
+		Database:      db,
+		NotifiedUsers: make(map[string]bool, 100),
+	}
+
+	handlers.Set(dispatcher, &client)
 
 	updater := ext.NewUpdater(dispatcher, nil)
+	not := notificator.Notificator{NotifiedUsers: make(map[string]bool, 100), Database: db, Cfg: cfg}
 
 	log.Info("start polling")
 
@@ -96,6 +102,8 @@ func Start() error {
 			},
 		},
 	})
+
+	not.StartNotificationScheduler(bot)
 
 	updater.Idle()
 

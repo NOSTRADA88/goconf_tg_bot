@@ -1,3 +1,4 @@
+// Package handlers provides functions for handling different types of user interactions.
 package handlers
 
 import (
@@ -9,6 +10,7 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers/filters/callbackquery"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers/filters/message"
+	"sync"
 )
 
 const (
@@ -36,10 +38,12 @@ const (
 	updatePerformance    = "updatePerformance"
 	updateComment        = "updateComment"
 	updateNoComment      = "updateNoComment"
+	help                 = "help"
 )
 
-func Set(dispatcher *ext.Dispatcher, c Client) {
+func Set(dispatcher *ext.Dispatcher, c *Client) {
 	dispatcher.AddHandler(handlers.NewCommand(start, c.startHandler))
+	dispatcher.AddHandler(handlers.NewCommand(help, c.helpHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(confInfo), c.confInfoCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(viewReports), c.viewReportsCBHandler))
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(updateIdentification), c.changeIdentificationCBHandler))
@@ -77,7 +81,9 @@ func Set(dispatcher *ext.Dispatcher, c Client) {
 }
 
 type Client struct {
-	Cfg      *config.Config
-	FSM      fsm.StateController
-	Database mongodb.DataManipulator
+	Cfg           *config.Config
+	FSM           fsm.StateController
+	Database      mongodb.DataManipulator
+	NotifiedUsers map[string]bool
+	mu            sync.Mutex
 }
