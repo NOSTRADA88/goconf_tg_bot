@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"context"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/fsm"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/handlers"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/notificator"
@@ -59,7 +60,10 @@ func Start() error {
 		return err
 	}
 
-	errInit := db.Init()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	errInit := db.Init(ctx)
 
 	if errInit != nil {
 		log.ErrorF("failed to init user with unique field tgID: %v", errInit)
@@ -71,16 +75,10 @@ func Start() error {
 		}
 	}()
 
-	err = db.Init()
-
-	if err != nil {
-		log.Error(err)
-	}
-
 	log.Info("database was connected successfully")
 
 	client := handlers.Client{
-		FSM:           fsm.New(redis.New(cfg.Redis.Host, cfg.Redis.Port)),
+		FSM:           fsm.New(redis.New(cfg.Redis.Host, cfg.Redis.Port), ctx),
 		Cfg:           cfg,
 		Database:      db,
 		NotifiedUsers: make(map[string]bool, 100),

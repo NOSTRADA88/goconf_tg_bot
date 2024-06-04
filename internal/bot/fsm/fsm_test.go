@@ -3,69 +3,85 @@ package fsm_test
 import (
 	"context"
 	"errors"
-	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/fsm"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"testing"
 	"time"
+
+	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/fsm"
+	"github.com/NOSTRADA88/telegram-bot-go/internal/repository/redis"
 )
 
 type MockCacheClient struct {
-	mock.Mock
+	state string
+	err   error
 }
 
 func (m *MockCacheClient) Get(ctx context.Context, key int64) (string, error) {
-	args := m.Called(ctx, key)
-	return args.String(0), args.Error(1)
+	return m.state, m.err
 }
 
 func (m *MockCacheClient) Set(ctx context.Context, key int64, value interface{}, duration time.Duration) error {
-	args := m.Called(ctx, key, value, duration)
-	return args.Error(0)
+	return m.err
 }
 
-func (m *MockCacheClient) Ping(ctx context.Context) error {
-	args := m.Called(ctx)
-	return args.Error(0)
+func TestGetStateReturnsStateWhenNoError(t *testing.T) {
+	mockCacheClient := &MockCacheClient{state: "state", err: nil}
+
+	f := fsm.New(mockCacheClient, context.Background())
+	state, err := f.GetState(1)
+
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if state != "state" {
+		t.Errorf("Expected state 'state', got '%s'", state)
+	}
 }
 
-func TestGetStateReturnsCorrectState(t *testing.T) {
-	mockCacheClient := new(MockCacheClient)
-	mockCacheClient.On("Get", mock.Anything, int64(1)).Return("state", nil)
+func TestGetStateReturnsEmptyStringWhenRedisNil(t *testing.T) {
+	mockCacheClient := &MockCacheClient{state: "", err: redis.Nil}
 
-	f := fsm.New(mockCacheClient)
-	state, err := f.GetState(context.Background(), 1)
+	f := fsm.New(mockCacheClient, context.Background())
+	state, err := f.GetState(1)
 
-	assert.NoError(t, err)
-	assert.Equal(t, "state", state)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+
+	if state != "" {
+		t.Errorf("Expected state '', got '%s'", state)
+	}
 }
 
-func TestGetStateReturnsErrorWhenGetFails(t *testing.T) {
-	mockCacheClient := new(MockCacheClient)
-	mockCacheClient.On("Get", mock.Anything, int64(1)).Return("", errors.New("get failed"))
+func TestGetStateReturnsErrorWhenRedisError(t *testing.T) {
+	mockCacheClient := &MockCacheClient{state: "", err: errors.New("redis error")}
 
-	f := fsm.New(mockCacheClient)
-	_, err := f.GetState(context.Background(), 1)
+	f := fsm.New(mockCacheClient, context.Background())
+	_, err := f.GetState(1)
 
-	assert.Error(t, err)
+	if err == nil {
+		t.Errorf("Expected error, got nil")
+	}
 }
 
-func TestSetStateReturnsNoErrorWhenSetSucceeds(t *testing.T) {
-	mockCacheClient := new(MockCacheClient)
-	mockCacheClient.On("Set", mock.Anything, int64(1), "state", mock.AnythingOfType("time.Duration")).Return(nil)
+func TestSetStateReturnsNoErrorWhenSuccessful(t *testing.T) {
+	mockCacheClient := &MockCacheClient{err: nil}
 
-	f := fsm.New(mockCacheClient)
-	err := f.SetState(context.Background(), 1, "state")
+	f := fsm.New(mockCacheClient, context.Background())
+	err := f.SetState(1, "state")
 
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
 }
 
-func TestSetStateReturnsErrorWhenSetFails(t *testing.T) {
-	mockCacheClient := new(MockCacheClient)
-	mockCacheClient.On("Set", mock.Anything, int64(1), "state", mock.AnythingOfType("time.Duration")).Return(errors.New("set failed"))
+func TestSetStateReturnsErrorWhenUnsuccessful(t *testing.T) {
+	mockCacheClient := &MockCacheClient{err: errors.New("redis error")}
 
-	f := fsm.New(mockCacheClient)
-	err := f.SetState(context.Background(), 1, "state")
+	f := fsm.New(mockCacheClient, context.Background())
+	err := f.SetState(1, "state")
 
-	assert.Error(t, err)
+	if err == nil {
+		t.Errorf("Expected error, got nil")
+	}
 }

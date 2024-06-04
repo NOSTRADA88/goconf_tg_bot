@@ -1,4 +1,4 @@
-name: Test
+name: Build and Test
 
 on:
   push:
@@ -42,3 +42,19 @@ jobs:
           CONFERENCE_FROM_TIME: ${{ secrets.CONFERENCE_FROM_TIME }}
           CONFERENCE_UNTIL_TIME: ${{ secrets.CONFERENCE_UNTIL_TIME }}
           CONFERENCE_REVIEWS_AVAILABLE_TIME: ${{ secrets.CONFERENCE_REVIEWS_AVAILABLE_TIME }}
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.22.0
+
+      - name: Build
+        run: go build -v ./...

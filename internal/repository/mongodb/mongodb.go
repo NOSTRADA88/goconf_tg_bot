@@ -1,3 +1,4 @@
+// Package mongodb provides a client for interacting with a MongoDB database.
 package mongodb
 
 import (
@@ -10,25 +11,32 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// ctx is a global context used for MongoDB operations.
+var ctx context.Context
+
+// Client is a struct that wraps a MongoDB client.
 type Client struct {
 	mongo *mongo.Client
 }
 
+// DataManipulator is an interface that defines methods for manipulating data in the database.
 type DataManipulator interface {
 	ReportManipulator
 	UserManipulator
 	EvaluationManipulator
-	Init() error
+	Init(context context.Context) error
 	Collection(collection string) *mongo.Collection
 	InsertOne(coll *mongo.Collection, data interface{}) error
 }
 
+// ReportManipulator is an interface that defines methods for manipulating report data.
 type ReportManipulator interface {
 	InsertMany(coll *mongo.Collection, data []interface{}) (bool, bool, error)
 	SelectReport(coll *mongo.Collection, url string) (models.Report, error)
 	SelectReports(coll *mongo.Collection) ([]models.Report, error)
 }
 
+// UserManipulator is an interface that defines methods for manipulating user data.
 type UserManipulator interface {
 	SelectUser(coll *mongo.Collection, tgID int) (models.User, error)
 	SelectUsers(coll *mongo.Collection) ([]models.User, error)
@@ -37,6 +45,7 @@ type UserManipulator interface {
 	RemoveUserFavReport(coll *mongo.Collection, tgID int, reportURL string) error
 }
 
+// EvaluationManipulator is an interface that defines methods for manipulating evaluation data.
 type EvaluationManipulator interface {
 	SelectEvaluation(coll *mongo.Collection, tgID int, url string) (bool, models.Evaluation, error)
 	SelectEvaluations(coll *mongo.Collection, tgID int) ([]models.Evaluation, error)
@@ -45,38 +54,44 @@ type EvaluationManipulator interface {
 	DeleteEvaluation(coll *mongo.Collection, tgID int, url string) (bool, error)
 }
 
+// New creates a new MongoDB client and returns it.
 func New(host string, port int, user, password string) (*Client, error) {
-	client, err := mongo.Connect(context.Background(), options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s:%v", user, password, host, port)))
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(fmt.Sprintf("mongodb://%s:%s@%s:%v", user, password, host, port)))
 	if err != nil {
 		return nil, err
 	}
 	return &Client{mongo: client}, nil
 }
 
+// Close disconnects the MongoDB client.
 func (c *Client) Close() error {
-	return c.mongo.Disconnect(context.Background())
+	return c.mongo.Disconnect(ctx)
 }
 
-func (c *Client) Init() error {
+// Init initializes the MongoDB client with a given context and ensures uniqueness of user IDs and evaluations.
+func (c *Client) Init(context context.Context) error {
+	ctx = context
 	if err := c.ensureUserTgIDUnique(); err != nil {
 		return err
 	}
 	return c.ensureEvaluationTgIDAndURLUnique()
 }
 
+// ensureUserTgIDUnique ensures that the user ID is unique in the database.
 func (c *Client) ensureUserTgIDUnique() error {
 	coll := c.Collection("user")
 	indexModel := mongo.IndexModel{
 		Keys:    bson.M{"tgID": 1},
 		Options: options.Index().SetUnique(true),
 	}
-	_, err := coll.Indexes().CreateOne(context.Background(), indexModel)
+	_, err := coll.Indexes().CreateOne(ctx, indexModel)
 	if err != nil {
 		return err
 	}
 	return err
 }
 
+// ensureEvaluationTgIDAndURLUnique ensures that the combination of user ID and URL is unique in the database.
 func (c *Client) ensureEvaluationTgIDAndURLUnique() error {
 	coll := c.Collection("evaluation")
 	indexModel := mongo.IndexModel{
@@ -86,17 +101,19 @@ func (c *Client) ensureEvaluationTgIDAndURLUnique() error {
 		},
 		Options: options.Index().SetUnique(true),
 	}
-	_, err := coll.Indexes().CreateOne(context.Background(), indexModel)
+	_, err := coll.Indexes().CreateOne(ctx, indexModel)
 	if err != nil {
 		return err
 	}
 	return err
 }
 
+// Collection returns a MongoDB collection with the given name.
 func (c *Client) Collection(collection string) *mongo.Collection {
 	return c.mongo.Database("tg-bot").Collection(collection)
 }
 
+// InsertMany inserts multiple documents into a collection.
 func (c *Client) InsertMany(coll *mongo.Collection, data []interface{}) (bool, bool, error) {
 	switch coll.Name() {
 	case "report":
@@ -114,7 +131,7 @@ func (c *Client) InsertMany(coll *mongo.Collection, data []interface{}) (bool, b
 		}
 		return isUpdated, isDeleted, nil
 	default:
-		_, err := coll.InsertMany(context.Background(), data)
+		_, err := coll.InsertMany(ctx, data)
 		if err != nil {
 			return false, false, err
 		}
@@ -122,6 +139,7 @@ func (c *Client) InsertMany(coll *mongo.Collection, data []interface{}) (bool, b
 	return false, false, nil
 }
 
+// updateReports updates existing reports in the database.
 func updateReports(coll *mongo.Collection, data []interface{}) (bool, error) {
 	for _, report := range data {
 		filter := bson.M{"url": report.(models.Report).URL}
@@ -134,7 +152,7 @@ func updateReports(coll *mongo.Collection, data []interface{}) (bool, error) {
 			},
 		}
 		opts := options.Update().SetUpsert(true)
-		_, err := coll.UpdateOne(context.Background(), filter, update, opts)
+		_, err := coll.UpdateOne(ctx, filter, update, opts)
 		if err != nil {
 			return false, err
 		}
@@ -145,7 +163,7 @@ func updateReports(coll *mongo.Collection, data []interface{}) (bool, error) {
 func deleteReports(coll *mongo.Collection, existingURLS []string) (bool, error) {
 	if len(existingURLS) != 0 {
 		filter := bson.M{"url": bson.M{"$nin": existingURLS}}
-		amount, err := coll.DeleteMany(context.Background(), filter)
+		amount, err := coll.DeleteMany(ctx, filter)
 		if err != nil {
 			return false, fmt.Errorf("failed to delete reports: %w", err)
 		}
@@ -156,23 +174,25 @@ func deleteReports(coll *mongo.Collection, existingURLS []string) (bool, error) 
 	return false, nil
 }
 
+// SelectReports selects all reports from a collection.
 func (c *Client) SelectReports(coll *mongo.Collection) ([]models.Report, error) {
-	cursor, err := coll.Find(context.Background(), bson.M{})
+	cursor, err := coll.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
 
 	var data []models.Report
 
-	if err = cursor.All(context.Background(), &data); err != nil {
+	if err = cursor.All(ctx, &data); err != nil {
 		return nil, err
 	}
 
 	return data, nil
 }
 
+// InsertOne inserts a single document into a collection.
 func (c *Client) InsertOne(coll *mongo.Collection, data interface{}) error {
-	_, err := coll.InsertOne(context.Background(), data)
+	_, err := coll.InsertOne(ctx, data)
 	if err != nil {
 		if mongo.IsDuplicateKeyError(err) {
 			return nil
@@ -182,29 +202,32 @@ func (c *Client) InsertOne(coll *mongo.Collection, data interface{}) error {
 	return nil
 }
 
+// SelectUser selects a user from a collection by their Telegram ID.
 func (c *Client) SelectUser(coll *mongo.Collection, tgID int) (models.User, error) {
 	var user models.User
 	filter := bson.D{{"tgID", tgID}}
-	err := coll.FindOne(context.Background(), filter).Decode(&user)
+	err := coll.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		return models.User{}, err
 	}
 	return user, nil
 }
 
+// UpdateUserID updates a user's identification in the database.
 func (c *Client) UpdateUserID(coll *mongo.Collection, tgID int, identification string) (bool, error) {
 	filter := bson.M{"tgID": tgID}
 	update := bson.M{"$set": bson.M{
 		"identification": identification,
 	}}
 	opts := options.Update().SetUpsert(true)
-	_, err := coll.UpdateOne(context.Background(), filter, update, opts)
+	_, err := coll.UpdateOne(ctx, filter, update, opts)
 	if err != nil {
 		return false, err
 	}
 	return true, nil
 }
 
+// AddUserFavReports adds a report to a user's list of favorite reports.
 func (c *Client) AddUserFavReports(coll *mongo.Collection, tgID int, report models.Report) error {
 	filter := bson.M{"tgID": tgID}
 	update := bson.M{
@@ -212,7 +235,7 @@ func (c *Client) AddUserFavReports(coll *mongo.Collection, tgID int, report mode
 			"favoriteReports": report,
 		},
 	}
-	_, err := coll.UpdateOne(context.Background(), filter, update)
+	_, err := coll.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}
@@ -224,7 +247,7 @@ func (c *Client) RemoveUserFavReport(coll *mongo.Collection, tgID int, reportURL
 	update := bson.M{"$pull": bson.M{
 		"favoriteReports": bson.M{"url": reportURL},
 	}}
-	_, err := coll.UpdateOne(context.Background(), filter, update)
+	_, err := coll.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return err
 	}
@@ -233,7 +256,7 @@ func (c *Client) RemoveUserFavReport(coll *mongo.Collection, tgID int, reportURL
 
 func (c *Client) SelectUsers(coll *mongo.Collection) ([]models.User, error) {
 
-	cursor, err := coll.Find(context.Background(), bson.M{})
+	cursor, err := coll.Find(ctx, bson.M{})
 
 	if err != nil {
 		return nil, err
@@ -241,7 +264,7 @@ func (c *Client) SelectUsers(coll *mongo.Collection) ([]models.User, error) {
 
 	var users []models.User
 
-	if err := cursor.All(context.Background(), &users); err != nil {
+	if err := cursor.All(ctx, &users); err != nil {
 		return nil, err
 	}
 
@@ -253,7 +276,7 @@ func (c *Client) SelectReport(coll *mongo.Collection, url string) (models.Report
 
 	filter := bson.D{{"url", url}}
 
-	err := coll.FindOne(context.Background(), filter).Decode(&report)
+	err := coll.FindOne(ctx, filter).Decode(&report)
 
 	if err != nil {
 		return models.Report{}, err
@@ -262,12 +285,13 @@ func (c *Client) SelectReport(coll *mongo.Collection, url string) (models.Report
 	return report, nil
 }
 
+// SelectEvaluation selects an evaluation from a collection by the user's Telegram ID and the report URL.
 func (c *Client) SelectEvaluation(coll *mongo.Collection, tgID int, url string) (bool, models.Evaluation, error) {
 	var evaluation models.Evaluation
 
 	filter := bson.D{{"tgID", tgID}, {"url", url}}
 
-	err := coll.FindOne(context.Background(), filter).Decode(&evaluation)
+	err := coll.FindOne(ctx, filter).Decode(&evaluation)
 
 	if err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
@@ -279,9 +303,10 @@ func (c *Client) SelectEvaluation(coll *mongo.Collection, tgID int, url string) 
 	return true, evaluation, nil
 }
 
+// SelectEvaluations selects all evaluations from a collection by the user's Telegram ID.
 func (c *Client) SelectEvaluations(coll *mongo.Collection, tgID int) ([]models.Evaluation, error) {
 
-	cursor, err := coll.Find(context.Background(), bson.M{"tgID": tgID})
+	cursor, err := coll.Find(ctx, bson.M{"tgID": tgID})
 
 	if err != nil {
 		return nil, err
@@ -289,22 +314,23 @@ func (c *Client) SelectEvaluations(coll *mongo.Collection, tgID int) ([]models.E
 
 	var evaluations []models.Evaluation
 
-	if err = cursor.All(context.Background(), &evaluations); err != nil {
+	if err = cursor.All(ctx, &evaluations); err != nil {
 		return nil, err
 	}
 
 	return evaluations, nil
 }
 
+// SelectAllEvaluations selects all evaluations from a collection.
 func (c *Client) SelectAllEvaluations(coll *mongo.Collection) ([]models.Evaluation, error) {
-	cursor, err := coll.Find(context.Background(), bson.M{})
+	cursor, err := coll.Find(ctx, bson.M{})
 	if err != nil {
 		return nil, err
 	}
 
 	var evaluations []models.Evaluation
 
-	err = cursor.All(context.Background(), &evaluations)
+	err = cursor.All(ctx, &evaluations)
 
 	if err != nil {
 		return nil, err
@@ -313,6 +339,7 @@ func (c *Client) SelectAllEvaluations(coll *mongo.Collection) ([]models.Evaluati
 	return evaluations, nil
 }
 
+// UpdateEvaluation updates an evaluation in the database.
 func (c *Client) UpdateEvaluation(coll *mongo.Collection, tgID int, url string, evaluation models.Evaluation) (bool, error) {
 	filter := bson.M{"tgID": tgID, "url": url}
 	update := bson.M{
@@ -323,7 +350,7 @@ func (c *Client) UpdateEvaluation(coll *mongo.Collection, tgID int, url string, 
 		},
 	}
 
-	updateResult, err := coll.UpdateOne(context.Background(), filter, update)
+	updateResult, err := coll.UpdateOne(ctx, filter, update)
 	if err != nil {
 		return false, err
 	}
@@ -331,9 +358,10 @@ func (c *Client) UpdateEvaluation(coll *mongo.Collection, tgID int, url string, 
 	return updateResult.ModifiedCount > 0, nil
 }
 
+// DeleteEvaluation deletes an evaluation from the database.
 func (c *Client) DeleteEvaluation(coll *mongo.Collection, tgID int, url string) (bool, error) {
 
-	deleted, err := coll.DeleteOne(context.Background(), bson.M{"tgID": tgID, "url": url})
+	deleted, err := coll.DeleteOne(ctx, bson.M{"tgID": tgID, "url": url})
 
 	if err != nil {
 		return false, err

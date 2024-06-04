@@ -13,6 +13,7 @@ import (
 	"sync"
 )
 
+// Constants representing different types of user interactions.
 const (
 	start                = "start"
 	menu                 = "menu"
@@ -41,6 +42,8 @@ const (
 	help                 = "help"
 )
 
+// Set adds handlers for different types of user interactions to the dispatcher.
+// Each handler is responsible for a specific type of interaction, such as a command or a callback.
 func Set(dispatcher *ext.Dispatcher, c *Client) {
 	dispatcher.AddHandler(handlers.NewCommand(start, c.startHandler))
 	dispatcher.AddHandler(handlers.NewCommand(help, c.helpHandler))
@@ -80,10 +83,12 @@ func Set(dispatcher *ext.Dispatcher, c *Client) {
 	dispatcher.AddHandler(handlers.NewCallback(callbackquery.Equal(downloadReviews), c.downloadReviewsCBHandler))
 }
 
+// Client represents a client that can handle different types of user interactions.
+// It contains configuration information, a state controller, a database manipulator, and a map of notified users.
 type Client struct {
-	Cfg           *config.Config
-	FSM           fsm.StateController
-	Database      mongodb.DataManipulator
-	NotifiedUsers map[string]bool
-	mu            sync.Mutex
+	Cfg           *config.Config          // Configuration information.
+	FSM           fsm.StateController     // State controller for managing user states.
+	Database      mongodb.DataManipulator // Database manipulator for interacting with the database.
+	NotifiedUsers map[string]bool         // Map of users who have been notified.
+	mu            sync.Mutex              // Mutex for synchronizing access to the NotifiedUsers map.
 }

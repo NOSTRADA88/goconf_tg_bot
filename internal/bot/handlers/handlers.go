@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"bufio"
-	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -23,7 +22,7 @@ const (
 
 func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
-	state, err := c.FSM.GetState(context.Background(), ctx.EffectiveUser.Id)
+	state, err := c.FSM.GetState(ctx.EffectiveUser.Id)
 
 	if err != nil {
 		return err
@@ -33,7 +32,7 @@ func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	case "":
 
-		if err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, start); err != nil {
+		if err = c.FSM.SetState(ctx.EffectiveUser.Id, start); err != nil {
 			return err
 		}
 
@@ -41,7 +40,7 @@ func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	case uploadSchedule:
 
-		if err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, menu); err != nil {
+		if err = c.FSM.SetState(ctx.EffectiveUser.Id, menu); err != nil {
 			return err
 		}
 
@@ -58,7 +57,7 @@ func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	case updateIdentification:
 
-		err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, menu)
+		err = c.FSM.SetState(ctx.EffectiveUser.Id, menu)
 
 		if err != nil {
 			return err
@@ -103,7 +102,7 @@ func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 			return nil
 		}
 	default:
-		err = c.FSM.SetState(context.Background(), ctx.Message.From.Id, menu)
+		err = c.FSM.SetState(ctx.Message.From.Id, menu)
 
 		if err != nil {
 			return err
@@ -147,7 +146,7 @@ func (c *Client) startHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 func (c *Client) textHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
-	state, err := c.FSM.GetState(context.Background(), ctx.EffectiveUser.Id)
+	state, err := c.FSM.GetState(ctx.EffectiveUser.Id)
 
 	if err != nil {
 		return err
@@ -177,7 +176,7 @@ func (c *Client) textHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 			return err
 		}
 
-		if err = c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, menu); err != nil {
+		if err = c.FSM.SetState(ctx.EffectiveUser.Id, menu); err != nil {
 			return err
 		}
 
@@ -323,7 +322,7 @@ func (c *Client) textHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 				return errU
 			}
 
-			err = c.FSM.SetState(context.Background(), ctx.Message.From.Id, updateComment)
+			err = c.FSM.SetState(ctx.Message.From.Id, updateComment)
 
 			if err != nil {
 				return err
@@ -354,7 +353,7 @@ func (c *Client) textHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 func (c *Client) confInfoCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
-	err := c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, confInfo)
+	err := c.FSM.SetState(ctx.EffectiveUser.Id, confInfo)
 	if err != nil {
 		return err
 	}
@@ -375,7 +374,7 @@ func (c *Client) confInfoCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 func (c *Client) backCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
-	err := c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, menu)
+	err := c.FSM.SetState(ctx.EffectiveUser.Id, menu)
 
 	if err != nil {
 		return err
@@ -408,7 +407,7 @@ func (c *Client) backCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 func (c *Client) uploadScheduleCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
-	err := c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, uploadSchedule)
+	err := c.FSM.SetState(ctx.EffectiveUser.Id, uploadSchedule)
 
 	if err != nil {
 		return err
@@ -441,7 +440,7 @@ func getFormatReports(data []models.Report) string {
 
 func (c *Client) fileHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
-	state, err := c.FSM.GetState(context.Background(), ctx.EffectiveUser.Id)
+	state, err := c.FSM.GetState(ctx.EffectiveUser.Id)
 
 	if err != nil {
 		return err
@@ -622,7 +621,7 @@ func (c *Client) fileHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 func (c *Client) changeIdentificationCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
-	err := c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, updateIdentification)
+	err := c.FSM.SetState(ctx.EffectiveUser.Id, updateIdentification)
 
 	if err != nil {
 		return err
@@ -659,7 +658,7 @@ func (c *Client) indexHandlerCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error
 
 func (c *Client) viewReportsCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
-	err := c.FSM.SetState(context.Background(), ctx.EffectiveUser.Id, viewReports)
+	err := c.FSM.SetState(ctx.EffectiveUser.Id, viewReports)
 
 	if err != nil {
 		return err
@@ -916,7 +915,7 @@ func (c *Client) evaluateReportCBHandler(bot *gotgbot.Bot, ctx *ext.Context) err
 		return err
 	}
 
-	if err = c.FSM.SetState(context.Background(), cb.From.Id, fmt.Sprintf("evaluateReport;%s;%s", url, text)); err != nil {
+	if err = c.FSM.SetState(cb.From.Id, fmt.Sprintf("evaluateReport;%s;%s", url, text)); err != nil {
 		return err
 	}
 
@@ -927,7 +926,7 @@ func (c *Client) evaluationBeginCBHandler(bot *gotgbot.Bot, ctx *ext.Context) er
 
 	cb := ctx.Update.CallbackQuery
 
-	state, err := c.FSM.GetState(context.Background(), cb.From.Id)
+	state, err := c.FSM.GetState(cb.From.Id)
 
 	if err != nil {
 		return err
@@ -961,13 +960,13 @@ func (c *Client) contentCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 		return err
 	}
 
-	state, err := c.FSM.GetState(context.Background(), cb.From.Id)
+	state, err := c.FSM.GetState(cb.From.Id)
 
 	if err != nil {
 		return err
 	}
 
-	if err = c.FSM.SetState(context.Background(), cb.From.Id, fmt.Sprintf("%s;%s", state, markForContent)); err != nil {
+	if err = c.FSM.SetState(cb.From.Id, fmt.Sprintf("%s;%s", state, markForContent)); err != nil {
 		return err
 	}
 
@@ -978,7 +977,7 @@ func (c *Client) backToContentCBHandler(bot *gotgbot.Bot, ctx *ext.Context) erro
 
 	cb := ctx.Update.CallbackQuery
 
-	state, err := c.FSM.GetState(context.Background(), cb.From.Id)
+	state, err := c.FSM.GetState(cb.From.Id)
 
 	if err != nil {
 
@@ -1002,7 +1001,7 @@ func (c *Client) backToContentCBHandler(bot *gotgbot.Bot, ctx *ext.Context) erro
 			return err
 		}
 
-		err = c.FSM.SetState(context.Background(), cb.From.Id, strings.Join(stateSeparated[:3], ";")+";")
+		err = c.FSM.SetState(cb.From.Id, strings.Join(stateSeparated[:3], ";")+";")
 
 		if err != nil {
 			return err
@@ -1019,13 +1018,13 @@ func (c *Client) performanceCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error 
 
 	markPerformance := strings.Split(cb.Data, ";")[1]
 
-	state, err := c.FSM.GetState(context.Background(), cb.From.Id)
+	state, err := c.FSM.GetState(cb.From.Id)
 
 	if err != nil {
 		return err
 	}
 
-	errS := c.FSM.SetState(context.Background(), cb.From.Id, fmt.Sprintf("%s;%s", state, markPerformance))
+	errS := c.FSM.SetState(cb.From.Id, fmt.Sprintf("%s;%s", state, markPerformance))
 
 	if errS != nil {
 		return errS
@@ -1045,7 +1044,7 @@ func (c *Client) performanceCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error 
 func (c *Client) evaluateEndNoCommentCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 	cb := ctx.Update.CallbackQuery
 
-	state, err := c.FSM.GetState(context.Background(), cb.From.Id)
+	state, err := c.FSM.GetState(cb.From.Id)
 
 	if err != nil {
 		return err
@@ -1073,7 +1072,7 @@ func (c *Client) noWishToEvaluateCBHandler(bot *gotgbot.Bot, ctx *ext.Context) e
 
 	cb := ctx.Update.CallbackQuery
 
-	state, err := c.FSM.GetState(context.Background(), cb.From.Id)
+	state, err := c.FSM.GetState(cb.From.Id)
 
 	if err != nil {
 		return err
@@ -1103,7 +1102,7 @@ func (c *Client) noEvaluateCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	cb := ctx.Update.CallbackQuery
 
-	state, err := c.FSM.GetState(context.Background(), cb.From.Id)
+	state, err := c.FSM.GetState(cb.From.Id)
 
 	if err != nil {
 		return err
@@ -1133,7 +1132,7 @@ func (c *Client) userEvaluationsCBHandler(bot *gotgbot.Bot, ctx *ext.Context) er
 
 	cb := ctx.Update.CallbackQuery
 
-	err := c.FSM.SetState(context.Background(), cb.From.Id, userEvaluations)
+	err := c.FSM.SetState(cb.From.Id, userEvaluations)
 
 	if err != nil {
 		return err
@@ -1189,7 +1188,7 @@ func (c *Client) updateEvaluationCBHandler(bot *gotgbot.Bot, ctx *ext.Context) e
 		return err
 	}
 
-	err = c.FSM.SetState(context.Background(), cb.From.Id, fmt.Sprintf("%s;%s", cbSeparated[0], url))
+	err = c.FSM.SetState(cb.From.Id, fmt.Sprintf("%s;%s", cbSeparated[0], url))
 
 	if err != nil {
 		return err
@@ -1212,7 +1211,7 @@ func (c *Client) deleteEvaluationCBHandler(bot *gotgbot.Bot, ctx *ext.Context) e
 
 	cbSeparated := strings.Split(cb.Data, ";")
 
-	err := c.FSM.SetState(context.Background(), cb.From.Id, cbSeparated[0])
+	err := c.FSM.SetState(cb.From.Id, cbSeparated[0])
 
 	if err != nil {
 		return err
@@ -1246,13 +1245,13 @@ func (c *Client) updateContentCBHandler(bot *gotgbot.Bot, ctx *ext.Context) erro
 
 	content := cbSeparated[1]
 
-	state, err := c.FSM.GetState(context.Background(), cb.From.Id)
+	state, err := c.FSM.GetState(cb.From.Id)
 
 	if err != nil {
 		return err
 	}
 
-	err = c.FSM.SetState(context.Background(), cb.From.Id, fmt.Sprintf("%s;%s", state, content))
+	err = c.FSM.SetState(cb.From.Id, fmt.Sprintf("%s;%s", state, content))
 
 	_, _, err = cb.Message.EditText(bot, "Введи вашу оценку за выступление: ", &gotgbot.EditMessageTextOpts{
 		ReplyMarkup: performanceUpdateKB(),
@@ -1273,13 +1272,13 @@ func (c *Client) updatePerformanceCBHandler(bot *gotgbot.Bot, ctx *ext.Context) 
 
 	content := cbSeparated[1]
 
-	state, err := c.FSM.GetState(context.Background(), cb.From.Id)
+	state, err := c.FSM.GetState(cb.From.Id)
 
 	if err != nil {
 		return err
 	}
 
-	err = c.FSM.SetState(context.Background(), cb.From.Id, fmt.Sprintf("%s;%s", state, content))
+	err = c.FSM.SetState(cb.From.Id, fmt.Sprintf("%s;%s", state, content))
 
 	_, _, err = cb.Message.EditText(bot, "Введите дополнительный комментарий или нажмите на кнопку \"Далее\"", &gotgbot.EditMessageTextOpts{
 		ReplyMarkup: commentUpdateKB(),
@@ -1296,7 +1295,7 @@ func (c *Client) updateWithNoCommentCBHandler(bot *gotgbot.Bot, ctx *ext.Context
 
 	cb := ctx.Update.CallbackQuery
 
-	state, err := c.FSM.GetState(context.Background(), cb.From.Id)
+	state, err := c.FSM.GetState(cb.From.Id)
 
 	if err != nil {
 		return err
