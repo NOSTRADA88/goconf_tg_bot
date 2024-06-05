@@ -8,7 +8,7 @@ RUN go mod download
 
 COPY . .
 
-COPY cmd/telegram-bot-go/.env .
+COPY .env .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -o tg-bot ./cmd/telegram-bot-go/main.go
 

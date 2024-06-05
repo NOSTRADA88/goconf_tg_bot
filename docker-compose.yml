@@ -18,7 +18,7 @@ services:
     container_name: mongo
     restart: always
     env_file:
-      - cmd/telegram-bot-go/.env
+      - .env
     volumes:
       - ./mongo-data:/data/db
     environment:
@@ -32,7 +32,7 @@ services:
     container_name: redis
     restart: always
     env_file:
-      - cmd/telegram-bot-go/.env
+      - .env
     volumes:
       - ./redis-data:/data
     ports:
