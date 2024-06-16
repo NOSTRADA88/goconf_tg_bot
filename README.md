@@ -30,7 +30,7 @@
         - **logger.go**: Main logging file.
     - **models/**: Data models.
         - **models.go**: Main data models.
-    - **repository/**: Data access implementations.
+    - **storage/**: Data access implementations.
         - **mongodb/**: MongoDB repository implementations.
         - **redis/**: Redis cache implementations.
 - **go.mod** and **go.sum**: Go module files for managing dependencies.
