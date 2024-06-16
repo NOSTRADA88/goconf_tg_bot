@@ -3,7 +3,7 @@
 - [.env Small Explanations](#env-small-explanations)
 - [Getting Started](#getting-started)
 - [Project Features](#project-features)
-- [Need to Add](#need-to-add)
+- [Need to Add/Fix](#need-to-addfix)
 
 
 ## Used libraries
@@ -37,11 +37,11 @@
 
 ## .env Small Explanations
 
-#### .env file should be in root directory
+#### should be in root directory.
 
-ADMIN_IDS_LIST - list of administrator IDs, which contains integers, separated by `,` (for singular admin you need to pass `ADMIN_IDS_LIST=121123`). Use https://t.me/getmyid_bot to ger your id
+ADMIN_IDS_LIST - list of administrator IDs, which contains integers, separated by `,` (for singular admin you need to pass `ADMIN_IDS_LIST=121123`). Use https://t.me/getmyid_bot to ger your id.
 
-All others explanations can be found in `.env.example`
+All others explanations can be found in `.env.example`.
 
 
 ## Getting Started
@@ -68,7 +68,7 @@ All notifications will be automatically deleted after 7 seconds of living. JSON 
 - **MongoDB**: Data storage and retrieval.
 - **Redis**: Cache implementation for fast access to frequently used data.
 
-## Need to Add
+## Need to Add/Fix
 
 1. Changes from reviewer.
 2. Tests (honestly they were, but all of them were useless, so I need to rewrite them all).
