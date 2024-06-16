@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/config"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/models"
-	"github.com/NOSTRADA88/telegram-bot-go/internal/repository/mongodb"
+	"github.com/NOSTRADA88/telegram-bot-go/internal/storage/mongodb"
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"log"
 	"sync"

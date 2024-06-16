@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/fsm"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/config"
-	"github.com/NOSTRADA88/telegram-bot-go/internal/repository/mongodb"
+	"github.com/NOSTRADA88/telegram-bot-go/internal/storage/mongodb"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext/handlers/filters/callbackquery"

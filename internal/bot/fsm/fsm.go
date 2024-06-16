@@ -4,7 +4,7 @@ package fsm
 import (
 	"context"
 	"errors"
-	"github.com/NOSTRADA88/telegram-bot-go/internal/repository/redis"
+	"github.com/NOSTRADA88/telegram-bot-go/internal/storage/redis"
 )
 
 // StateController interface defines the methods for getting and setting user states.

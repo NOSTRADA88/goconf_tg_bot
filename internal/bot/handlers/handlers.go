@@ -10,6 +10,8 @@ import (
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 	"net/http"
 	"os"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -384,7 +386,7 @@ func (c *Client) backCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	if _, exists := c.Cfg.Administrators.IDsInMap[int(cb.From.Id)]; exists {
 		_, _, err = cb.Message.EditText(bot,
-			"Вы вернулись в главное меню. Как удобно, что я обрабатываю все ваши сценрии использования этого бота. Если вам нужна помощь по использованию бота - \\help",
+			"Вы вернулись в главное меню. Как удобно, что я обрабатываю все ваши сценрии использования этого бота. Если вам нужна помощь по использованию бота - /help",
 			&gotgbot.EditMessageTextOpts{ParseMode: html, ReplyMarkup: mainMenuAdminKB()})
 
 		if err != nil {
@@ -393,7 +395,7 @@ func (c *Client) backCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 
 	} else {
 		_, _, err = cb.Message.EditText(bot,
-			"Вы вернулись в главное меню. Как удобно, что я обрабатываю все ваши сценрии использования этого бота. Если вам нужна помощь по использованию бота - \\help",
+			"Вы вернулись в главное меню. Как удобно, что я обрабатываю все ваши сценрии использования этого бота. Если вам нужна помощь по использованию бота - /help",
 			&gotgbot.EditMessageTextOpts{ParseMode: html, ReplyMarkup: mainMenuUserKB()})
 
 		if err != nil {
@@ -438,151 +440,121 @@ func getFormatReports(data []models.Report) string {
 	return reports
 }
 
+func detectDelimiter(line string) rune {
+	delimiters := []rune{',', ';', '\t'}
+	for _, delimiter := range delimiters {
+		if strings.ContainsRune(line, delimiter) {
+			return delimiter
+		}
+	}
+	return ','
+}
+
 func (c *Client) fileHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
-
 	state, err := c.FSM.GetState(ctx.EffectiveUser.Id)
-
 	if err != nil {
 		return err
 	}
 
 	switch state {
-
 	case uploadSchedule:
-
-		fileExtension := strings.Split(ctx.EffectiveMessage.Document.FileName, ".")[len(strings.Split(ctx.EffectiveMessage.Document.FileName, "."))-1]
-
-		if fileExtension != "scv" {
+		fileExtension := strings.ToLower(filepath.Ext(ctx.EffectiveMessage.Document.FileName))
+		if fileExtension != ".csv" {
 			_, errSF := bot.SendMessage(ctx.EffectiveChat.Id, "Простите, но я работают исключительно с файлами в формате .csv", nil)
-
 			if errSF != nil {
 				return errSF
 			}
-
-			return fmt.Errorf("incorrect file extension: expected \"scv\" got \"%v\"", fileExtension)
+			return fmt.Errorf("incorrect file extension: expected \".csv\" got \"%v\"", fileExtension)
 		}
 
 		file, errF := bot.GetFile(ctx.EffectiveMessage.Document.FileId, nil)
-
 		if errF != nil {
 			return errF
 		}
 
 		response, errG := http.Get(fmt.Sprintf("https://api.telegram.org/file/bot%s/%s", c.Cfg.Telegram.Token, file.FilePath))
-
 		if errG != nil {
 			return errG
 		}
-
-		defer func() {
-			if errC := response.Body.Close(); errC != nil {
-			}
-		}()
+		defer response.Body.Close()
 
 		scanner := bufio.NewScanner(response.Body)
-
 		var reports []interface{}
 
 		for scanner.Scan() {
+			line := scanner.Text()
 
-			reader := csv.NewReader(strings.NewReader(scanner.Text()))
+			delimiter := detectDelimiter(line)
 
+			reader := csv.NewReader(strings.NewReader(line))
+			reader.Comma = delimiter
 			reader.TrimLeadingSpace = true
 
 			record, errR := reader.Read()
-
 			if errR != nil {
 				return errR
 			}
 
 			if len(record) != 5 {
-
 				_, errSL := bot.SendMessage(ctx.EffectiveChat.Id, "Длина каждой строки в файле должна быть равна 5!\n```\nStart (MSK Time Zone),Duration (min),Title,Speakers,URL\n```", nil)
-
 				if errSL != nil {
 					return errSL
 				}
-
-				return fmt.Errorf("invalid line length: excpeted 5, got %v", len(record))
+				return fmt.Errorf("invalid line length: expected 5, got %v", len(record))
 			}
 
 			t, errT := time.Parse("02/01/2006 15:04:05", record[0])
-
 			if errT != nil {
 				_, errST := bot.SendMessage(ctx.EffectiveChat.Id, "Строка содержит неправильный формат времени!\n\n02/01/2006 15:04:05\n\n", nil)
-
 				if errST != nil {
 					return errST
 				}
-
 				return errT
 			}
 
 			if t.Before(time.Time(c.Cfg.Conference.TimeFrom)) || time.Time(c.Cfg.Conference.TimeUntil).Before(t) {
 				_, errST := bot.SendMessage(ctx.EffectiveChat.Id, fmt.Sprintf("Время доклада \"%s\" не попадает в интервал с %s по %s", record[2], time.Time(c.Cfg.Conference.TimeFrom).Format("02.01.2006 15:04:05"), time.Time(c.Cfg.Conference.TimeUntil).Format("02.01.2006 15:04:05")), nil)
-
 				if errST != nil {
 					return errST
 				}
-
 				return fmt.Errorf("mismatched time interval")
 			}
 
-			var duration int
-
-			_, errS := fmt.Sscanf(record[1], "%d", &duration)
-
+			duration, errS := strconv.Atoi(record[1])
 			if errS != nil {
 				return errS
 			}
 
-			report := models.Report{StartTime: t, Duration: duration, Title: record[2],
-				Speakers: record[3], URL: record[4]}
+			report := models.Report{
+				StartTime: t,
+				Duration:  duration,
+				Title:     record[2],
+				Speakers:  record[3],
+				URL:       record[4],
+			}
 			reports = append(reports, report)
-
 		}
 
 		isUpdated, isDeleted, errM := c.Database.InsertMany(c.Database.Collection("report"), reports)
-
 		if errM != nil {
 			return errM
 		}
 
-		if isUpdated {
+		if isUpdated || isDeleted {
 			var wg sync.WaitGroup
 			users, errS := c.Database.SelectUsers(c.Database.Collection("user"))
 			if errS != nil {
 				return errS
 			}
-			for _, user := range users {
-				if user.TgID != int(ctx.EffectiveUser.Id) {
-					msg, errSM := bot.SendMessage(ctx.EffectiveChat.Id, "Доклады были обновлены. Пожалуйста, ознакомьтесь с изменениями в \"👀 Посмотреть доклады\"\n\n*Скоро я удалю это сообшение*", nil)
-					if errSM != nil {
-						return errM
-					}
-					wg.Add(1)
-					go func(msg *gotgbot.Message) {
-						defer wg.Done()
-						time.Sleep(time.Second * 3)
-						_, errD := bot.DeleteMessage(msg.Chat.Id, msg.MessageId, nil)
-						if errD != nil {
-							return
-						}
-					}(msg)
-				}
-			}
-			wg.Wait()
-		}
 
-		if isDeleted {
-			var wg sync.WaitGroup
-			users, errS := c.Database.SelectUsers(c.Database.Collection("user"))
-			if errS != nil {
-				return errS
+			messageText := "Доклады были обновлены. Пожалуйста, ознакомьтесь с изменениями в \"👀 Посмотреть доклады\"\n\n*Скоро я удалю это сообшение*"
+			if isDeleted {
+				messageText = "Некоторые доклады были удалены. Пожалуйста, ознакомьтесь с изменённым списком докладов в \"👀 Посмотреть доклады\"\n\n*Скоро я удалю это сообшение*"
 			}
+
 			for _, user := range users {
 				if user.TgID != int(ctx.EffectiveUser.Id) {
-					msg, errSM := bot.SendMessage(ctx.EffectiveChat.Id, "Некоторые доклады были удалены. Пожалуйста, ознакомьтесь с изменённым списком докладов в \"👀 Посмотреть доклады\"\n\n*Скоро я удалю это сообшение*", nil)
+					msg, errSM := bot.SendMessage(ctx.EffectiveChat.Id, messageText, nil)
 					if errSM != nil {
 						return errSM
 					}
@@ -590,10 +562,7 @@ func (c *Client) fileHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 					go func(msg *gotgbot.Message) {
 						defer wg.Done()
 						time.Sleep(time.Second * 3)
-						_, errD := bot.DeleteMessage(msg.Chat.Id, msg.MessageId, nil)
-						if errD != nil {
-							return
-						}
+						bot.DeleteMessage(msg.Chat.Id, msg.MessageId, nil)
 					}(msg)
 				}
 			}
@@ -604,10 +573,10 @@ func (c *Client) fileHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 			ParseMode:   html,
 			ReplyMarkup: backToMainMenuAdminKB(),
 		})
-
 		if err != nil {
 			return err
 		}
+
 	default:
 		_, err = bot.DeleteMessage(ctx.EffectiveChat.Id, ctx.EffectiveMessage.MessageId, nil)
 
@@ -616,7 +585,6 @@ func (c *Client) fileHandler(bot *gotgbot.Bot, ctx *ext.Context) error {
 		}
 	}
 	return nil
-
 }
 
 func (c *Client) changeIdentificationCBHandler(bot *gotgbot.Bot, ctx *ext.Context) error {

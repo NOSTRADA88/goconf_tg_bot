@@ -1,6 +1,10 @@
 .idea
 cmd/telegram-bot-go/.env
 .env
-mongo-data
-redis-data
+dockerstorage
+.vscode
+*.iml
+*.bak
+reviewPartOne.jpg
+reviewPartTwo.jpg
 

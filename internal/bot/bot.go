@@ -2,13 +2,14 @@ package bot
 
 import (
 	"context"
+	"fmt"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/fsm"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/handlers"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/bot/notificator"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/config"
 	"github.com/NOSTRADA88/telegram-bot-go/internal/logger"
-	"github.com/NOSTRADA88/telegram-bot-go/internal/repository/mongodb"
-	"github.com/NOSTRADA88/telegram-bot-go/internal/repository/redis"
+	"github.com/NOSTRADA88/telegram-bot-go/internal/storage/mongodb"
+	"github.com/NOSTRADA88/telegram-bot-go/internal/storage/redis"
 	"github.com/PaulSonOfLars/gotgbot/v2"
 	"github.com/PaulSonOfLars/gotgbot/v2/ext"
 	"time"
@@ -22,7 +23,7 @@ func Start() error {
 	cfg, err := config.New()
 
 	if err != nil {
-		log.Error("failed to load config")
+		panic(fmt.Sprintf("failed to load config: %v", err))
 		return err
 	}
 
@@ -57,6 +58,7 @@ func Start() error {
 	db, err := mongodb.New(cfg.Database.Host, cfg.Database.Port, cfg.Database.User, cfg.Database.Password)
 	if err != nil {
 		log.ErrorF("an error occurred on connection to mongo: %v", err)
+		panic(fmt.Sprintf("failed to load config: %s", err.Error()))
 		return err
 	}
 

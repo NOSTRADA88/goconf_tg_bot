@@ -69,7 +69,8 @@ func (c *confTime) UnmarshalText(text []byte) error {
 func New() (*Config, error) {
 	var err error
 
-	err = godotenv.Load(".env") // Load environment variables from .env file.
+	// Load environment variables from .env file.
+	err = godotenv.Load(".env")
 
 	if err != nil {
 		return nil, err
@@ -77,7 +78,8 @@ func New() (*Config, error) {
 
 	conf := new(Conference)
 
-	err = env.Parse(conf) // Parse environment variables into Conference struct.
+	// Parse environment variables into Conference struct.
+	err = env.Parse(conf)
 
 	if err != nil {
 		return nil, err
@@ -85,11 +87,22 @@ func New() (*Config, error) {
 
 	cfg := new(Config)
 
+	// Parse environment variables into Config struct.
 	cfg.Conference = *conf
-	err = env.Parse(cfg) // Parse environment variables into Config struct.
+	err = env.Parse(cfg)
 
 	if err != nil {
 		return nil, err
+	}
+	fmt.Println(cfg.Administrators.IDs)
+	// Conference name should be given
+	if cfg.Conference.Name == "" {
+		return nil, fmt.Errorf("CONFERENCE_NAME is required")
+	}
+
+	// Conference URL should be given
+	if cfg.Conference.URL == "" {
+		return nil, fmt.Errorf("CONFERENCE_URL is required")
 	}
 
 	// Check that conference times are logical.
@@ -102,11 +115,10 @@ func New() (*Config, error) {
 	}
 
 	// Create a map of administrator IDs for quick lookup.
-	cfg.Administrators.IDsInMap = make(map[int]bool, len(cfg.IDs))
-
-	for _, v := range cfg.Administrators.IDs {
-		if _, exists := cfg.Administrators.IDsInMap[v]; !exists {
-			cfg.Administrators.IDsInMap[v] = true
+	cfg.Telegram.Administrators.IDsInMap = make(map[int]bool, len(cfg.Telegram.Administrators.IDs))
+	for _, v := range cfg.Telegram.Administrators.IDs {
+		if _, exists := cfg.Telegram.Administrators.IDsInMap[v]; !exists {
+			cfg.Telegram.Administrators.IDsInMap[v] = true
 		}
 	}
 

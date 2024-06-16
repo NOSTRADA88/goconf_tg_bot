@@ -1,6 +1,18 @@
 .env.example
 README.md
 test.scv
+.idea
 
-mongo-data
-redis-data
+reviewPartOne.jpg
+reviewPartTwo.jpg
+
+dockerstorage
+
+.vscode
+.git
+.gitignore
+*.iml
+*.bak
+
+Dockerfile
+docker-compose.yml

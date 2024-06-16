@@ -20,20 +20,20 @@ services:
     env_file:
       - .env
     volumes:
-      - ./mongo-data:/data/db
+      - ./dockerstorage/mongo:/data/db
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${DB_USER}
       - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD}
     ports:
-      - "${DB_PORT}:${DB_PORT}"
+      - "${DB_PORT}:27017"
 
   redis:
-    image: redis:7.2.4-alpine
+    image: redis:7.4-rc1-alpine3.20
     container_name: redis
     restart: always
     env_file:
       - .env
     volumes:
-      - ./redis-data:/data
+      - ./dockerstorage/redis:/data
     ports:
-      - "${REDIS_PORT}:${REDIS_PORT}"
+      - "${REDIS_PORT}:6379"
